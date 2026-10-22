@@ -1,29 +1,123 @@
-# 🔒 صندوق پیام ناشناس مشاور مدرسه | Telegram SecretLine Bot
+# صندوق پیام باشگاه اوتاکو — انتشارات نگاه آشنا
 
-این مخزن حاوی کدهای کامل ربات تلگرام **صندوق پیام ناشناس مشاور** است. هدف از انتشار عمومی (Open-Source) این کدها، شفافیت کامل و اطمینان خاطر دانش‌آموزان از حفظ حریم خصوصی‌شان است.
+نسخهٔ محلی سفارشی‌شده از [NotPouria/telegram-secretline-bot](https://github.com/NotPouria/telegram-secretline-bot)، با مجوز MIT اصلی بدون تغییر. این پروژه فورک منتشرشده در گیت‌هاب نیست و هنوز روی Cloudflare یا تلگرام واقعی راه‌اندازی نشده است.
 
-### 🛡️ این ربات چطور امنیت و ناشناس بودن شما را تضمین می‌کند؟
-۱. **عدم دسترسی به اطلاعات پروفایل:** در کدهای فایل `worker.js`، ربات به هیچ عنوان نام (`first_name`)، نام خانوادگی (`last_name`) یا نام کاربری (`username`) فرستنده پیام را نمی‌خواند.
-۲. **بدون دیتابیس و بدون ذخیره‌سازی:** این ربات روی زیرساخت ابری Cloudflare Workers اجرا می‌شود و هیچ پایگاه داده‌ای (Database) برای ذخیره تاریخچه پیام‌ها یا اطلاعات دانش‌آموزان ندارد.
-۳. **رمزنگاری دوطرفه (`AES-GCM`):** برای اینکه مشاور بتواند بدون دیدن هویت شما به پیامتان پاسخ دهد، شناسه چت شما با استاندارد امنیتی `AES-GCM` قفل می‌شود و فقط در لحظه ارسال پاسخ، توسط ربات رمزگشایی می‌شود.
+## امکانات
 
----
+- پیام دوطرفه در **چت خصوصی**؛ مدیران پاسخ را با Reply به پیام کپی‌شده یا سربرگ آن می‌فرستند.
+- چند مدیر مستقل (۱ تا ۵؛ برای این باشگاه دو شناسه وارد کنید). همهٔ مدیران پیام را دریافت می‌کنند؛ پاسخ هر مدیر فقط به کاربر می‌رود، نه مدیر دیگر. هماهنگی بین مدیران انسانی است.
+- دسته‌های «پیشنهاد کتاب»، «انتقاد»، «ارتباط با انتشارات». دستهٔ پیش‌فرض ارتباط با انتشارات است؛ آخرین انتخاب برای پیام‌های بعدی باقی می‌ماند.
+- متن، عکس، ویدئو، صدا، ویس، فایل، استیکر، انیمیشن و ویدئونوت. آلبوم‌ها به صورت پیام‌های جدا می‌آیند. مخاطب، موقعیت، نظرسنجی، پیام خدماتی و پرداخت پشتیبانی نمی‌شوند.
+- کپی با `copyMessage`، بدون لینک فرستنده و **بدون تغییر/بریدن متن یا کپشن**؛ مسیر پاسخ در SQLite با زوج `(admin_chat_id, message_id)` است، نه متن قابل‌جعل پیام.
+- وب‌هوک فقط POST، با `X-Telegram-Bot-Api-Secret-Token`؛ تنظیم ناقص یا secret ضعیف با 503، secret نادرست با 403، JSON نامعتبر با 400، بدنهٔ بیش از 128KiB با 413 رد می‌شود. `/register` وجود ندارد.
+- کنترل همزمان `from.id`، `chat.id` و نوع private. گروه، کانال، callback و پیام ویرایش‌شده پردازش نمی‌شوند.
+- SQLite Durable Object برای dedup و rate-limit تراکنشی: کاربر ۶ و مدیر ۳۰ آپدیت در پنجرهٔ ۶۰ثانیه‌ای. فرمان‌ها و انتخاب دسته نیز حساب می‌شوند. این شمارنده حافظه‌ای یا KV غیراتمی نیست.
 
-## 🌐 English Overview (For Developers & Educators)
+## حریم خصوصی — قبل از استفاده بخوانید
 
-**Telegram SecretLine Bot** is a lightweight, zero-database, two-way anonymous relay bot built for Cloudflare Workers. Originally created to replace physical school counselor drop-boxes (which lack privacy and two-way communication), it allows students to reach out for support anonymously and receive replies directly inside Telegram.
+«ناشناس» فقط یعنی ربات نام/یوزرنیم و لینک پروفایل فرستنده را به صورت سربرگ برای مدیر نمی‌فرستد. **از تلگرام، Cloudflare یا اپراتور دارای دسترسی به توکن/دیتابیس ناشناس نیستید**؛ تلگرام آپدیت شامل شناسه و اطلاعات پروفایل را به زیرساخت ربات می‌دهد. این ربات رمزنگاری سرتاسری یا ناشناسی مطلق فراهم نمی‌کند.
 
-### Key Features
-* **True Sender Anonymity:** Never accesses `msg.from` (names, usernames, or profile info).
-* **Stateless & Zero-Database:** Uses Web Crypto API (`AES-GCM` + `SHA-256`) to encrypt routing tokens directly inside message footers—no KV or SQL database required.
-* **Consistent Thread Aliases:** Generates a 6-character one-way hash (`#a4f9c2`) so the counselor knows when the same anonymous student is continuing a conversation.
-* **English Admin / Persian User Interface:** Counselor notifications and code are in English; student-facing messages and privacy explanations are in Persian.
+خود متن، اشاره به افراد، مشخصات فایل، صدای شما، تصویر و کپشن می‌توانند هویتتان را نشان دهند. کپی پیام این اطلاعات را پاک‌سازی نمی‌کند. اطلاعات حساس نفرستید. مدیران نیز باید بدانند محتوای پاسخشان بدون نام پروفایل اما بدون پاک‌سازی محتوایی کپی می‌شود.
 
-### Quick Deployment (Cloudflare Workers)
-1. Fork or clone this repository.
-2. Connect the repository to a Cloudflare Worker (`wrangler.toml` is pre-configured).
-3. Add the following in **Settings -> Variables and Secrets**:
-   * `BOT_TOKEN`: Your Telegram Bot token from `@BotFather`
-   * `ADMIN_ID`: Your numeric Telegram chat ID
-   * `REPO_URL`: Link to your public GitHub repository
-4. Visit `https://<your-worker>.workers.dev/register` once in your browser to register the Telegram webhook.
+ذخیرهٔ برنامه:
+
+| داده | هدف | نگهداری |
+|---|---|---|
+| شناسهٔ کاربر، شناسهٔ مدیر و پیام کپی‌شده | پاسخ دوطرفه | ۳۰ روز از هر پیام |
+| شناسهٔ کاربر و دسته | انتخاب موضوع | ۳۰ روز از انتخاب |
+| شناسهٔ update | جلوگیری از پردازش تکراری | ۷ روز، سپس پاک‌سازی دوره‌ای |
+| شناسهٔ کاربر، شمارنده و زمان | کنترل نرخ | ۶۰ ثانیه، سپس پاک‌سازی دوره‌ای |
+| شناسهٔ کاربر و رسید تصادفی مسدودی | جلوگیری از سوءاستفاده | تا رفع مسدودی |
+
+متن پیام، فایل، نام و نام کاربری در دیتابیس برنامه ذخیره نمی‌شوند. پاک‌سازی ساعتی است؛ حذف فیزیکی معمولاً تا یک ساعت پس از انقضا و در اختلال زیرساخت دیرتر انجام می‌شود. پاسخ به مسیر منقضی‌شده فوراً رد می‌شود. نسخه‌های پیام در چت‌های تلگرام و پشتیبان/PITR زیرساخت با این حذف از بین نمی‌روند و سیاست مستقل دارند. Observability برنامه در تنظیم پیش‌فرض غیرفعال است؛ توکن، بدنه و شرح خطاهای تلگرام در کد لاگ نمی‌شوند. تنظیمات logging حساب Cloudflare را هم بررسی کنید.
+
+## اجرای محلی و تست بدون توکن
+
+Node.js جدید (حداقل 22؛ اجرای این تحویل با Node 26.7.0) و npm لازم است:
+
+```sh
+npm ci
+npm test
+npm run check
+npm run build
+```
+
+`npm test` کد واقعی `worker.js` را در Miniflare/workerd و SQLite واقعی اجرا می‌کند. **فقط transport خارجی تلگرام mock است**؛ خروجی outbound به شبکهٔ واقعی تلگرام وصل نمی‌شود. شناسه‌ها و توکن داخل تست کاملاً ساختگی‌اند. تست همزمانی، نگهداری و راه‌اندازی مجدد نیز وجود دارد. فایل‌های `evidence/` خروجی واقعی RED/GREEN هستند؛ «تست سبز» معادل تست با تلگرام واقعی یا استقرار نیست.
+
+`npm run build` فقط dry-run محلی است. برای بررسی سرور محلی می‌توانید `.dev.vars.example` را به `.dev.vars` کپی کنید و `npm run dev` بزنید. **برخلاف تست، dev transport را mock نمی‌کند؛ توکن واقعی می‌تواند ارسال واقعی انجام دهد.** برای تست‌های خودکار فقط `npm test` کافی است و هیچ فایل secret لازم نیست.
+
+وابستگی‌ها pin و lock شده‌اند. overrideهای `undici` و `sharp` برای رفع هشدارهای audit نسخهٔ پایدار Miniflare هستند؛ بعد از هر به‌روزرسانی `npm test` و `npm audit` را دوباره اجرا کنید. Wrangler وابستگی داخلی Miniflare متفاوتی دارد؛ harness تست از نسخهٔ پایدار مستقیم استفاده می‌کند.
+
+## استقرار — توسط مالک و فقط پس از بازبینی
+
+این مراحل **در این تحویل اجرا نشده‌اند**. حساب Cloudflare با پشتیبانی SQLite Durable Objects و یک ربات جداگانهٔ BotFather نیاز است. هیچ توکن Hermes یا ربات دیگری را استفاده نکنید.
+
+۱. نام Worker در `wrangler.toml` را در صورت نیاز عوض کنید. binding `INBOX` و migration `new_sqlite_classes = ["Inbox"]` را نگه دارید. یک Worker و یک Durable Object نام‌ثابت برای هر ربات؛ چند ربات را روی یک دیتابیس مشترک نگذارید.
+
+۲. شناسهٔ عددی مثبت حساب هر دو مدیر را از منبع مورداعتماد خودتان تهیه کنید؛ شناسهٔ گروه یا یوزرنیم نیست. هر دو مدیر باید در چت خصوصی همین ربات `/start` بفرستند. در این مخزن هیچ شناسهٔ واقعی پیش‌فرضی وجود ندارد.
+
+۳. یک secret تصادفی مستقل بسازید (این دستور توکن ربات نیست):
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+۴. از سیستم خودتان وارد Cloudflare شوید و secrets را به‌صورت تعاملی ذخیره کنید؛ مقدار توکن را در کد، README، Git یا تاریخچهٔ فرمان نگذارید:
+
+```sh
+npx wrangler login
+npx wrangler secret put BOT_TOKEN
+npx wrangler secret put WEBHOOK_SECRET
+npx wrangler secret put ADMIN_IDS
+npm run deploy
+```
+
+`ADMIN_IDS` باید دقیقاً مثل `شناسه_مدیر_اول,شناسه_مدیر_دوم` اما با اعداد واقعی انگلیسی، بدون فاصله، بدون تکرار و بدون علامت منفی باشد. این عبارت فارسی نمونهٔ قالب است، نه مقدار قابل استفاده. `WEBHOOK_SECRET` همان hex تصادفی است؛ حداقل ۳۲ کاراکتر و فقط حروف انگلیسی/عدد/خط‌تیره/زیرخط پذیرفته می‌شود.
+
+۵. ثبت وب‌هوک فقط از دستگاه مالک به API تلگرام انجام شود، نه از URL عمومی Worker. نمونهٔ PowerShell زیر رازها را از محیط همان فرایند می‌گیرد؛ آن‌ها را با ابزار امن خودتان وارد محیط کنید. این فرمان‌ها عملیات واقعی هستند و فقط با اجازهٔ مالک اجرا شوند:
+
+```powershell
+# Required process environment: BOT_TOKEN, WEBHOOK_SECRET, WORKER_URL
+# WORKER_URL = https://your-worker.your-subdomain.workers.dev (no trailing slash)
+$base = "https://api.telegram.org/bot$($env:BOT_TOKEN)"
+$payload = @{
+  url = "$($env:WORKER_URL)/webhook"
+  secret_token = $env:WEBHOOK_SECRET
+  allowed_updates = @("message")
+  max_connections = 1
+  drop_pending_updates = $false
+} | ConvertTo-Json
+$result = Invoke-RestMethod -Method Post -Uri "$base/setWebhook" -ContentType "application/json" -Body $payload
+if (-not $result.ok) { throw "Webhook registration failed" }
+$info = Invoke-RestMethod -Method Post -Uri "$base/getWebhookInfo"
+$info.result | Select-Object url, pending_update_count, last_error_message
+```
+
+secret در `getWebhookInfo` بازگردانده نمی‌شود. برای بررسی واقعی، یک پیام آزمایشی غیرحساس با حساب آزمایشی بفرستید، دریافت هر دو مدیر و پاسخ هر دو را بررسی کنید، سپس `/block` و `/unblock` را امتحان کنید. تست نبود secret باید 403 بدهد؛ ارسال جعلی بدون secret هیچ اثری ندارد. توکن را در اسکرین‌شات و خطاهای ترمینال منتشر نکنید. هنگام چرخش secret، ابتدا تنظیم Worker و سپس ثبت مجدد وب‌هوک را هماهنگ کنید؛ فاصلهٔ بین آن‌ها ممکن است باعث تلاش مجدد تلگرام شود.
+
+## راهنمای مدیر
+
+- `/start`: راهنمای کوتاه؛ `/privacy`: توضیح حریم خصوصی.
+- برای پاسخ، روی پیام کپی‌شده **یا سربرگ مرتبط** Reply کنید و متن/رسانه بفرستید. پاسخ مدیرِ دیگر به شما کپی نمی‌شود.
+- برای مسدود کردن، روی همان پیام Reply کنید و فقط `/block` بفرستید.
+- برای رفع مسدودی روی همان پیام `/unblock` بفرستید؛ یا فرمان `/unblock <receipt>` را از رسید تصادفی مسدودی اجرا کنید. رسید را نگه دارید/با مدیر دیگر به‌صورت امن به اشتراک بگذارید؛ پس از ۳۰ روز مسیر قبلی منقضی می‌شود ولی رسید تا رفع مسدودی معتبر است. رسید بدون هویت مدیر اجازهٔ اجرا نمی‌دهد.
+- شناسهٔ عددی یا متن داخل پیام کاربر مجوز مسیریابی نیست. مدیری که از `ADMIN_IDS` حذف شود دیگر به مسیرهای قدیمی خود دسترسی ندارد. هر مدیر مجاز می‌تواند کل مسدودی را رفع کند.
+- مسدودی پیام‌های قبلاً در حال ارسال را پس نمی‌گیرد. بازگشت پاسخ تضمین خوانده‌شدن نیست.
+
+## تحویل، خطا و محدودیت‌های مهم
+
+- پاسخ HTTP موفق، `ok:true` و `result.message_id` معتبر هر سه برای اعلام ارسال لازم‌اند. خطای HTTP، `ok:false`، JSON خراب، نبود شناسه و timeout پنج‌ثانیه‌ای موفقیت محسوب نمی‌شوند. خرابی یک مدیر مانع تلاش برای دیگری نمی‌شود و گزارش «بخشی از مدیران» داده می‌شود. اگر خود پیام گزارش هم شکست بخورد، کاربر ممکن است هیچ تأییدی نبیند.
+- Telegram Bot API کلید idempotency برای این ارسال‌ها ندارد. این نسخه **at-most-once attempt** در بازهٔ dedup انتخاب می‌کند: update قبل از اثر خارجی ثبت می‌شود، و تکرار همان update حتی پس از خطا دوباره ارسال نمی‌شود. خرابی دقیقاً بین ثبت update و ارسال، یا ارسال موفق و ذخیرهٔ مسیر، می‌تواند باعث پیام ازدست‌رفته یا پیام غیرقابل‌پاسخ شود. تضمین exactly-once/تحویل قطعی وجود ندارد.
+- خطای 429/5xx یا timeout در این نسخه صف retry خودکار ندارد. پیام «تأیید نشد» عمداً نمی‌گوید قطعاً نرسیده؛ تلاش دستی بعدی یک update جدید است و ممکن است تکراری برسد. در outage، نبود تأیید را موفقیت فرض نکنید. متن پیام برای ساخت outbox ذخیره نشده است. اگر نیاز عملیاتی شما تحویل بدون از‌دست‌رفتن است، پیش از استفاده باید outbox و بازیابی عملیاتی با سیاست نگهداری تازه طراحی شود.
+- rate-limit علیه چند حساب/حملهٔ حجمی عمومی کافی نیست. سهمیه و هزینهٔ Cloudflare/Telegram مستقل است؛ این معماری تک‌DO برای باشگاه کوچک است، نه مقیاس نامحدود. WAF/کنترل هزینه را جدا تنظیم کنید.
+- تغییر نام Durable Object، حذف ذخیره، rollback ناسازگار schema یا تعویض ربات، مسیرهای قبلی را قابل اتکا نمی‌گذارد. توکن ربات رمز پایگاه داده نیست. بکاپ و کنترل دسترسی مسئولیت اپراتور است.
+
+## منابع و منشأ
+
+- اصل پروژه، MIT، commit پایه: `45007cabcbbde857f238cf7d9210495542fc4fc3`؛ جزئیات بررسی در `UPSTREAM_REVIEW.md`.
+- [Telegram Bot API: setWebhook / copyMessage / response](https://core.telegram.org/bots/api)
+- [Cloudflare SQLite Durable Object Storage و transactionSync](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/)
+- [Cloudflare Alarms](https://developers.cloudflare.com/durable-objects/api/alarms/)
+- [Cloudflare Durable Object migrations](https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/)
+
+`LICENSE` اصلی متعلق به NotPouria حفظ شده است. این سفارشی‌سازی نیز تحت همان MIT توزیع می‌شود.

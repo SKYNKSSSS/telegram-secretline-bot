@@ -1,0 +1,34 @@
+✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (288.5197ms)
+✔ both admins get unmodified copy and durable message-id reply routing independent of captions (245.8482ms)
+✔ Telegram failures never claim delivery and one failing admin does not prevent the other (1102.9791ms)
+✔ duplicate update is atomically claimed once even under concurrency (255.3667ms)
+✔ durable transactional rate gate caps concurrent new messages at six per minute (301.0001ms)
+✔ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (259.236ms)
+✔ invalid JSON/update/config is rejected without effects; unsupported identity-bearing content is not relayed (511.9748ms)
+✔ retention alarm deletes expired metadata but preserves active routes and block list (503.6528ms)
+✔ unblock receipt works after routing metadata expires without exposing Telegram user ID (418.2293ms)
+✖ real SQLite persistence retains routes, category, dedup, rate and blocks across workerd restart (513.0402ms)
+✔ webhook fails closed for missing/wrong configuration and secret; no public registration (345.4773ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 10
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5133.8981
+
+✖ failing tests:
+
+test at test\worker.test.js:183:1
+✖ real SQLite persistence retains routes, category, dedup, rate and blocks across workerd restart (513.0402ms)
+  Error [ERR_SERVER_NOT_RUNNING]: Server is not running.
+      at Server.close (node:net:2815:12)
+      at Server.wrapper (node:events:639:12)
+      at Server.emit (node:events:514:20)
+      at emitCloseNT (node:net:2875:8)
+      at processTicksAndRejections (node:internal/process/task_queues:89:21)
+      at runNextTicks (node:internal/process/task_queues:69:3)
+      at process.processImmediate (node:internal/timers:541:9) {
+    code: 'ERR_SERVER_NOT_RUNNING'
+  }

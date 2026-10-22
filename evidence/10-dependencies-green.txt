@@ -1,0 +1,431 @@
+✖ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (5.976ms)
+✖ both admins get unmodified copy and durable message-id reply routing independent of captions (0.6142ms)
+✖ Telegram failures never claim delivery and one failing admin does not prevent the other (0.529ms)
+✖ duplicate update is atomically claimed once even under concurrency (0.438ms)
+✖ durable transactional rate gate caps concurrent new messages at six per minute (0.4488ms)
+✖ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (0.4659ms)
+✖ invalid JSON/update/config is rejected without effects; unsupported identity-bearing content is not relayed (0.4727ms)
+✖ retention alarm deletes expired metadata but preserves active routes and block list (0.4927ms)
+✖ webhook fails closed for missing/wrong configuration and secret; no public registration (0.5681ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 0
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 434.2298
+
+✖ failing tests:
+
+test at test\worker.test.js:36:1
+✖ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (5.976ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 5 lines matching cause stack trace ...
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:37:19)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.start (node:internal/test_runner/test:1257:17)
+        at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  }
+
+test at test\worker.test.js:51:1
+✖ both admins get unmodified copy and durable message-id reply routing independent of captions (0.6142ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:52:19)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  }
+
+test at test\worker.test.js:73:1
+✖ Telegram failures never claim delivery and one failing admin does not prevent the other (0.529ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:75:21)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }
+
+test at test\worker.test.js:95:1
+✖ duplicate update is atomically claimed once even under concurrency (0.438ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:96:17)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }
+
+test at test\worker.test.js:103:1
+✖ durable transactional rate gate caps concurrent new messages at six per minute (0.4488ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:104:17)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }
+
+test at test\worker.test.js:110:1
+✖ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (0.4659ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:111:17)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }
+
+test at test\worker.test.js:129:1
+✖ invalid JSON/update/config is rejected without effects; unsupported identity-bearing content is not relayed (0.4727ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:130:17)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }
+
+test at test\worker.test.js:145:1
+✖ retention alarm deletes expired metadata but preserves active routes and block list (0.4927ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:146:17)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }
+
+test at test\worker.test.js:165:1
+✖ webhook fails closed for missing/wrong configuration and secret; no public registration (0.5681ms)
+  MiniflareCoreError [ERR_VALIDATION]: Unexpected options passed to `new Miniflare()` constructor:
+  ✖ Unrecognized keys: "modules", "script", "compatibilityDate", "durableObjects", "bindings", "outboundService"
+  ✖ Invalid input: expected array, received undefined
+    → at workers
+      at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133159:24)
+      at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+      ... 7 lines matching cause stack trace ...
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ERR_VALIDATION',
+    cause: ZodError: [
+      {
+        "expected": "array",
+        "code": "invalid_type",
+        "path": [
+          "workers"
+        ],
+        "message": "Invalid input: expected array, received undefined"
+      },
+      {
+        "code": "unrecognized_keys",
+        "keys": [
+          "modules",
+          "script",
+          "compatibilityDate",
+          "durableObjects",
+          "bindings",
+          "outboundService"
+        ],
+        "path": [],
+        "message": "Unrecognized keys: \"modules\", \"script\", \"compatibilityDate\", \"durableObjects\", \"bindings\", \"outboundService\""
+      }
+    ]
+        at validateOptions (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133121:37)
+        at new _Miniflare (C:\Users\GIGABYTE-SMT\Projects\otaku-secretline\node_modules\miniflare\dist\src\index.js:133550:38)
+        at harness (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:15:14)
+        at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:166:19)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1397:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+        at Test.postRun (node:internal/test_runner/test:1537:19)
+        at Test.run (node:internal/test_runner/test:1462:12)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:969:7)
+  }

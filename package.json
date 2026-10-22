@@ -1,0 +1,8 @@
+{
+  "name": "otaku-secretline", "version": "1.0.0", "private": true, "type": "module",
+  "description": "Otaku Club private Telegram relay for انتشارات نگاه آشنا",
+  "scripts": {"test": "node --test --test-concurrency=1 test/*.test.js", "check": "node --check worker.js", "dev": "wrangler dev --local", "deploy": "wrangler deploy", "build": "wrangler deploy --dry-run --outdir dist"},
+  "engines": {"node": ">=22"},
+  "devDependencies": {"miniflare": "4.20260730.0", "wrangler": "4.151.3"},
+  "overrides": {"undici": "7.29.1", "sharp": "0.35.5"}
+}

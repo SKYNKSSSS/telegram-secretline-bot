@@ -1,272 +1,153 @@
-/**
- * Open-Source Anonymous School Counselor Bot (Cloudflare Worker)
- * Admin & Code: English | Student Interface: Persian (Farsi)
- * Zero-Database | AES-GCM Encrypted Routing
- * License: MIT
- */
-
+// Otaku Club customization of NotPouria/telegram-secretline-bot. MIT; see LICENSE.
+const FAILURE = '⚠️ ارسال تأیید نشد؛ ممکن است تحویل شده باشد. ارسال خودکار تکرار نمی‌شود. کمی بعد دوباره تلاش کنید؛ ممکن است نسخه تکراری ایجاد شود.';
+const CATEGORIES = ['پیشنهاد کتاب','انتقاد','ارتباط با انتشارات'];
+const PRIVACY = 'نام و نام کاربری به مدیران در پیام کپی‌شده نمایش داده نمی‌شود؛ اما تلگرام، Cloudflare و اپراتور ربات می‌توانند به شناسه و محتوای پیام دسترسی داشته باشند. ناشناسی مطلق یا رمزنگاری سرتاسری نیست. متن، صدا و فایل شما ممکن است هویتتان را آشکار کند. شناسه مسیر و دسته تا ۳۰ روز، شناسه آپدیت تا ۷ روز و مسدودی تا رفع آن نگهداری می‌شود. متن پیام در پایگاه داده ربات ذخیره نمی‌شود؛ نسخه‌های تلگرام و پشتیبان زیرساخت تابع سیاست آن خدمات هستند.';
+const WELCOME = 'سلام! به باشگاه اوتاکو انتشارات نگاه آشنا خوش آمدید. موضوع را انتخاب کنید و پیام بفرستید؛ پاسخ همین‌جا می‌آید.\n\n' + PRIVACY;
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    const BOT_TOKEN = env.BOT_TOKEN;
-    const ADMIN_ID = String(env.ADMIN_ID || "").trim();
-    const REPO_URL = env.REPO_URL || "https://github.com";
-
-    if (!BOT_TOKEN || !ADMIN_ID) {
-      return new Response(
-        "⚠️ Missing Configuration: Set BOT_TOKEN and ADMIN_ID in Cloudflare Worker Variables.",
-        { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } }
-      );
+    if (new URL(request.url).pathname !== '/webhook') return new Response('Not found', {status:404});
+    if (request.method !== 'POST') return new Response('Method not allowed', {status:405});
+    const ids = String(env.ADMIN_IDS ?? '').split(',');
+    if (!env.BOT_TOKEN || !/^[A-Za-z0-9_-]{32,256}$/.test(env.WEBHOOK_SECRET ?? '') ||
+        ids.length > 5 || !ids.every(id => /^[1-9][0-9]*$/.test(id) && Number.isSafeInteger(Number(id))) ||
+        new Set(ids).size !== ids.length || !env.INBOX) return new Response('Not configured', {status:503});
+    if (request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.WEBHOOK_SECRET) return new Response('Forbidden', {status:403});
+    // Count actual bytes rather than trusting Content-Length.
+    const reader = request.body?.getReader();
+    let size = 0; const chunks = [];
+    if (!reader) return new Response('Invalid update', {status:400});
+    while (true) {
+      const {done,value} = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 131072) { await reader.cancel(); return new Response('Too large', {status:413}); }
+      chunks.push(value);
     }
-
-    // 1. One-click Webhook Registration: https://your-worker.workers.dev/register
-    if (url.pathname === "/register") {
-      const webhookUrl = `${url.origin}/webhook`;
-      const res = await fetch(
-        `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`
-      );
-      const data = await res.json();
-      return new Response(
-        data.ok
-          ? `✅ Webhook registered: ${webhookUrl}`
-          : `❌ Failed: ${JSON.stringify(data)}`,
-        { headers: { "content-type": "text/plain; charset=utf-8" } }
-      );
-    }
-
-    // 2. Telegram Webhook Endpoint
-    if (url.pathname === "/webhook" && request.method === "POST") {
-      try {
-        const update = await request.json();
-        if (update.message) {
-          await handleMessage(update.message, BOT_TOKEN, ADMIN_ID, REPO_URL);
-        } else if (update.callback_query) {
-          await handleCallback(update.callback_query, BOT_TOKEN, REPO_URL);
-        }
-      } catch (err) {
-        console.error("Webhook error:", err);
-      }
-      return new Response("OK", { status: 200 });
-    }
-
-    return new Response(
-      `🤖 Open-Source Anonymous School Counselor Bot is running.\nSource Code: ${REPO_URL}`,
-      { headers: { "content-type": "text/plain; charset=utf-8" } }
-    );
+    let update;
+    try { update = JSON.parse(await new Blob(chunks).text()); }
+    catch { return new Response('Invalid JSON', {status:400}); }
+    if (!Number.isSafeInteger(update?.update_id) || update.update_id < 0) return new Response('Invalid update', {status:400});
+    try {
+      return await env.INBOX.get(env.INBOX.idFromName('otaku-inbox-v1')).fetch(new Request(request.url,{method:'POST',body:JSON.stringify(update)}));
+    } catch { return new Response('Temporary failure', {status:503}); }
   },
 };
 
-// Escape HTML special characters so student/counselor text never breaks Telegram parsing
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-// Derive a cryptographic key from the bot token using SHA-256
-async function getCryptoKey(secret) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.digest("SHA-256", enc.encode(secret));
-  return crypto.subtle.importKey("raw", keyMaterial, { name: "AES-GCM" }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
-}
-
-// Generate a short 6-character anonymous alias (e.g., #a4f9c2) to group repeat messages from the same student
-async function getAnonAlias(chatId, secret) {
-  const enc = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-256", enc.encode(`${chatId}:${secret}`));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.slice(0, 3).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Encrypt the student's Chat ID using AES-GCM
-async function encryptRoute(chatId, secret) {
-  const key = await getCryptoKey(secret);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(String(chatId));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-
-  const combined = new Uint8Array(iv.length + ciphertext.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(ciphertext), iv.length);
-
-  return Array.from(combined).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Decrypt the student's Chat ID when the admin replies
-async function decryptRoute(hexToken, secret) {
-  const key = await getCryptoKey(secret);
-  const bytes = new Uint8Array(hexToken.match(/.{1,2}/g).map((b) => parseInt(b, 16)));
-  const iv = bytes.slice(0, 12);
-  const ciphertext = bytes.slice(12);
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-  return new TextDecoder().decode(decrypted);
-}
-
-async function tgApi(token, method, payload) {
-  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-}
-
-// Handle the student's "How does anonymity work?" button click (Persian for students)
-async function handleCallback(cb, token, repoUrl) {
-  if (cb.data === "explain_privacy") {
-    await tgApi(token, "answerCallbackQuery", { callback_query_id: cb.id });
-    const privacyText =
-      "🛡️ <b>چطور هویتت کاملاً مخفی می‌مونه؟</b>\n\n" +
-      "۱. این ربات طوری برنامه‌نویسی شده که اصلاً به نام، نام خانوادگی، یوزرنیم یا عکس پروفایل تو دسترسی نداره و اون‌ها رو نمی‌خونه.\n\n" +
-      "۲. ربات هیچ دیتابیس یا حافظه‌ای برای ذخیره اطلاعات دانش‌آموزها نداره.\n\n" +
-      "۳. وقتی پیامی می‌فرستی، آیدی عددی تلگرامت با الگوریتم امنیتی <code>AES-GCM</code> قفل (رمزنگاری) میشه تا مشاور فقط بتونه به پیامت جواب بده، بدون اینکه بدونه فرستنده کیه.\n\n" +
-      "۴. برای اینکه خیالت راحت باشه، کل کدهای این ربات به صورت <b>متن‌باز (Open-Source)</b> در گیت‌هاب منتشر شده و هر کسی می‌تونه کدهاش رو بررسی کنه.";
-
-    await tgApi(token, "sendMessage", {
-      chat_id: cb.message.chat.id,
-      text: privacyText,
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [[{ text: "🔍 مشاهده کدهای ربات در GitHub", url: repoUrl }]],
-      },
-    });
+export class Inbox {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+    this.sql = ctx.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS routes (admin TEXT, message INTEGER, user INTEGER, expires INTEGER, PRIMARY KEY(admin,message));
+      CREATE TABLE IF NOT EXISTS categories (user INTEGER PRIMARY KEY, category TEXT, expires INTEGER);
+      CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, expires INTEGER);
+      CREATE TABLE IF NOT EXISTS rates (user INTEGER PRIMARY KEY, count INTEGER, expires INTEGER);
+      CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);`);
   }
-}
-
-async function handleMessage(msg, token, adminId, repoUrl) {
-  const senderId = String(msg.chat.id);
-  const text = msg.text || "";
-
-  // Handle /start and /source commands (English for Admin, Persian for Students)
-  if (text.startsWith("/start") || text.startsWith("/source")) {
-    const isAdmin = senderId === adminId;
-    const welcomeText = isAdmin
-      ? "👋 <b>Counselor Admin Mode Active!</b>\n\nWhenever a student sends a message, it will appear here with a short thread alias (e.g., <code>#a4f9c2</code>).\nSimply <b>swipe to reply</b> on any student message to deliver your answer back to them."
-      : "سلام! 👋 به <b>صندوق پیام ناشناس مشاور</b> خوش اومدی. 🌱\n\n" +
-        "برخلاف صندوق‌های قدیمی که وسط راهروی مدرسه و زیر دوربینن هستن و عملا هیچ راه بدرد بخوری هم برای جواب دادن ندارن، اینجا یه فضای کاملاً امن و دوطرفه‌ست!\n\n" +
-        "هر دغدغه، سوال، درد دل یا پیشنهادی داری، می‌تونی همین‌جا به صورت <b>متن، عکس یا حتی ویس</b> بفرستی:\n" +
-        "🔹 نام، یوزرنیم و پروفایل تلگرامت <b>به هیچ وجه</b> برای من قابل دیدن نیست.\n" +
-        "🔹 وقتی جوابت رو بدم، همین‌جا برات ارسال میشه و می‌تونیم بدون اینکه هویتت مشخص بشه با هم گفتگو کنیم.\n\n" +
-        "هر وقت آماده بودی، پیامت رو پایین بنویس 👇";
-
-    const keyboard = isAdmin
-      ? [[{ text: "🔍 View Open-Source Repository (GitHub)", url: repoUrl }]]
-      : [
-          [{ text: "🔒 چطور ناشناس می‌مونم؟ (توضیح امنیت)", callback_data: "explain_privacy" }],
-          [{ text: "🔍 مشاهده کد متن‌باز ربات (GitHub)", url: repoUrl }],
-        ];
-
-    await tgApi(token, "sendMessage", {
-      chat_id: senderId,
-      text: welcomeText,
-      parse_mode: "HTML",
-      reply_markup: { inline_keyboard: keyboard },
-    });
-    return;
-  }
-
-  // CASE A: Admin is replying to a student's message (Admin notifications in English, Student view in Persian)
-  if (senderId === adminId) {
-    if (!msg.reply_to_message) {
-      await tgApi(token, "sendMessage", {
-        chat_id: adminId,
-        text: "⚠️ To answer a student, please <b>swipe to reply</b> directly on their message.",
-        parse_mode: "HTML",
-      });
-      return;
-    }
-
-    const originalContent = msg.reply_to_message.text || msg.reply_to_message.caption || "";
-    const match = originalContent.match(/\[#RT_([0-9a-fA-F]+)\]/);
-
-    if (!match) {
-      await tgApi(token, "sendMessage", {
-        chat_id: adminId,
-        text: "❌ Could not find a valid routing tag in the message you replied to.",
-      });
-      return;
-    }
-
-    try {
-      const targetChatId = await decryptRoute(match[1], token);
-      let result;
-
-      // Deliver reply to student with Persian counselor header
-      if (msg.text) {
-        result = await tgApi(token, "sendMessage", {
-          chat_id: targetChatId,
-          text: `💬 <b>پاسخ مشاور:</b>\n\n${escapeHtml(msg.text)}\n\n🌱 <i>می‌تونی همین‌جا به گفتگو ادامه بدی:</i>`,
-          parse_mode: "HTML",
-        });
-      } else {
-        result = await tgApi(token, "copyMessage", {
-          chat_id: targetChatId,
-          from_chat_id: adminId,
-          message_id: msg.message_id,
-          caption: msg.caption ? `💬 پاسخ مشاور:\n\n${msg.caption}` : "💬 پاسخ مشاور",
-        });
+  async alarm() {
+    const now = Date.now();
+    this.ctx.storage.transactionSync(() => {
+      for (const table of ['routes','categories','updates','rates']) {
+        this.sql.exec(`DELETE FROM ${table} WHERE expires<=?`,now);
       }
+    });
+    // Hourly cleanup, including idle periods. Logical expiry is checked on lookup.
+    await this.ctx.storage.setAlarm(now+3600000);
+  }
+  async api(method, payload) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${this.env.BOT_TOKEN}/${method}`, {
+        method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload),
+        signal:AbortSignal.timeout(5000),
+      });
+      const body = await res.json();
+      if (!res.ok || body.ok !== true || !Number.isSafeInteger(body.result?.message_id)) return null;
+      return body.result;
+    } catch { return null; } // No tokens, payloads or Telegram error descriptions in logs.
 
-      // Confirm delivery to Admin in English
-      await tgApi(token, "sendMessage", {
-        chat_id: adminId,
-        text: result.ok
-          ? "✅ Reply delivered to student!"
-          : "❌ Delivery failed (the student may have blocked the bot).",
-        reply_to_message_id: msg.message_id,
-      });
-    } catch {
-      await tgApi(token, "sendMessage", {
-        chat_id: adminId,
-        text: "❌ Failed to decrypt routing token.",
-      });
+  }
+  send(chat_id, text, extra={}) { return this.api('sendMessage', {chat_id,text,...extra}); }
+  route(admin, message, user) {
+    this.sql.exec('INSERT OR REPLACE INTO routes VALUES (?,?,?,?)',String(admin),message,user,Date.now()+30*86400000);
+  }
+  async fetch(request) {
+    if (await this.ctx.storage.getAlarm() === null) await this.ctx.storage.setAlarm(Date.now()+3600000);
+    const update = await request.json();
+    const m = update.message;
+    if (!m || m.chat?.type !== 'private' || m.from?.id !== m.chat.id || !Number.isSafeInteger(m.from?.id) || m.from.id <= 0 || !Number.isSafeInteger(m.message_id) || m.message_id <= 0) return new Response('Ignored');
+    // Claim durably BEFORE external side effects. Crash/timeout is not blindly retried.
+    const claimed = this.ctx.storage.transactionSync(() => {
+      if ([...this.sql.exec('SELECT id FROM updates WHERE id=?',update.update_id)].length) return false;
+      this.sql.exec('INSERT INTO updates VALUES (?,?)',update.update_id,Date.now()+7*86400000);
+      return true;
+    });
+    if (!claimed) return new Response('Duplicate');
+    const user = m.from.id;
+    const admins = this.env.ADMIN_IDS.split(',');
+    const admin = admins.includes(String(user));
+    const count = this.ctx.storage.transactionSync(() => {
+      const rate = [...this.sql.exec('SELECT count,expires FROM rates WHERE user=?',user)][0];
+      const active = rate && rate.expires > Date.now();
+      const n = active ? rate.count + 1 : 1;
+      this.sql.exec('INSERT OR REPLACE INTO rates VALUES (?,?,?)',user,n,active ? rate.expires : Date.now()+60000);
+      return n;
+    });
+    const limit = admin ? 30 : 6;
+    if (count > limit) {
+      if (count === limit+1) await this.send(user,'محدودیت تعداد پیام؛ یک دقیقه بعد دوباره تلاش کنید.');
+      return new Response('Rate limited');
     }
-    return;
+    const unblock = /^\/unblock ([a-f0-9-]{36})$/.exec(m.text ?? '');
+    if (admin && unblock) {
+      const result = [...this.sql.exec('DELETE FROM blocked WHERE handle=? RETURNING user',unblock[1])];
+      await this.send(user,result.length ? 'مسدودی فرستنده رفع شد.' : 'رسید مسدودی یافت نشد.');
+      return new Response('OK');
+    }
+    if (m.text === '/privacy') {
+      await this.send(user,PRIVACY);
+      return new Response('OK');
+    }
+    if (!['text','photo','video','voice','audio','document','sticker','video_note','animation'].some(type => m[type])) {
+      await this.send(user,'این نوع پیام پشتیبانی نمی‌شود. متن، عکس، فایل، ویدئو، استیکر یا صدا بفرستید؛ مخاطب و موقعیت ارسال نمی‌شود.');
+      return new Response('Unsupported');
+    }
+    if (!admin && [...this.sql.exec('SELECT user FROM blocked WHERE user=?',user)].length) {
+      await this.send(user,'ارسال پیام شما مسدود است.');
+      return new Response('Blocked');
+    }
+    if (m.text === '/start') {
+      await this.send(user,admin ? 'پنل مدیر: برای پاسخ روی پیام دریافتی ریپلای کنید.' : WELCOME,
+        {reply_markup:{keyboard:CATEGORIES.map(x => [x]),resize_keyboard:true}});
+    } else if (admin) {
+      const route = [...this.sql.exec('SELECT user FROM routes WHERE admin=? AND message=? AND expires>?',String(user),m.reply_to_message?.message_id ?? -1,Date.now())][0];
+      if (!route) await this.send(user,'مسیر پاسخ یافت نشد یا منقضی شده است. روی پیام دریافتی ریپلای کنید.');
+      else if (m.text === '/block') {
+        this.sql.exec('INSERT OR IGNORE INTO blocked VALUES (?,?)',route.user,crypto.randomUUID());
+        const handle = [...this.sql.exec('SELECT handle FROM blocked WHERE user=?',route.user)][0].handle;
+        await this.send(user,`فرستنده مسدود شد. رسید را برای رفع مسدودی پس از انقضای مسیر نگه دارید و در صورت نیاز با مدیر دیگر به اشتراک بگذارید:\n/unblock ${handle}`);
+      } else if (m.text === '/unblock') {
+        this.sql.exec('DELETE FROM blocked WHERE user=?',route.user);
+        await this.send(user,'مسدودی فرستنده رفع شد.');
+      } else {
+        const result = await this.api('copyMessage',{chat_id:route.user,from_chat_id:user,message_id:m.message_id});
+        await this.send(user,result ? '✅ پاسخ ارسال شد (به معنای خوانده شدن نیست).' : FAILURE);
+      }
+    } else if (CATEGORIES.includes(m.text)) {
+      this.sql.exec('INSERT OR REPLACE INTO categories VALUES (?,?,?)',user,m.text,Date.now()+30*86400000);
+      await this.send(user,'موضوع انتخاب شد؛ اکنون پیام را بفرستید.');
+    } else {
+      const category = [...this.sql.exec('SELECT category FROM categories WHERE user=? AND expires>?',user,Date.now())][0]?.category ?? CATEGORIES[2];
+      let delivered = 0;
+      for (const recipient of admins) {
+        const copied = await this.api('copyMessage',{chat_id:recipient,from_chat_id:user,message_id:m.message_id});
+        if (!copied) continue;
+        this.route(recipient,copied.message_id,user);
+        delivered++;
+        const header = await this.send(recipient,`📩 باشگاه اوتاکو | موضوع: ${category}\nبرای پاسخ، /block یا /unblock روی این پیام یا پیام بالا ریپلای کنید.`,{reply_parameters:{message_id:copied.message_id}});
+        if (header) this.route(recipient,header.message_id,user);
+      }
+      await this.send(user,delivered === admins.length ? '✅ پیام برای مدیران ارسال شد (به معنای خوانده شدن نیست).' : delivered ? '⚠️ پیام فقط به بخشی از مدیران رسید؛ ارسال دوباره ممکن است نسخه تکراری ایجاد کند.' : FAILURE);
+    }
+    return new Response('OK');
   }
-
-  // CASE B: Student sends an anonymous message (msg.from is NEVER read)
-  // Header sent to Admin is in English
-  const alias = await getAnonAlias(senderId, token);
-  const encryptedRoute = await encryptRoute(senderId, token);
-  const header = `📩 New Anonymous Message (Thread: #${alias})`;
-  const footer = `[#RT_${encryptedRoute}]`;
-
-  if (msg.text) {
-    await tgApi(token, "sendMessage", {
-      chat_id: adminId,
-      text: `${header}\n\n${msg.text}\n\n${footer}`,
-    });
-  } else if (msg.photo || msg.video || msg.voice || msg.audio || msg.document) {
-    const userCaption = msg.caption ? `\n\n${msg.caption}` : "";
-    const fullCaption = `${header}${userCaption}\n\n${footer}`;
-    await tgApi(token, "copyMessage", {
-      chat_id: adminId,
-      from_chat_id: senderId,
-      message_id: msg.message_id,
-      caption: fullCaption.slice(0, 1024),
-    });
-  } else {
-    // Stickers or round video notes
-    const copied = await tgApi(token, "copyMessage", {
-      chat_id: adminId,
-      from_chat_id: senderId,
-      message_id: msg.message_id,
-    });
-    await tgApi(token, "sendMessage", {
-      chat_id: adminId,
-      text: `${header}\n⬆️ (Reply to this message to answer the student above)\n\n${footer}`,
-      reply_to_message_id: copied.result?.message_id,
-    });
-  }
-
-  // Confirm delivery to the student in Persian
-  await tgApi(token, "sendMessage", {
-    chat_id: senderId,
-    text: "✅ پیامت به صورت کاملاً ناشناس به دست مشاور رسید.\nبه محض بررسی، جوابش رو همین‌جا دریافت می‌کنی. 🌱",
-    reply_to_message_id: msg.message_id,
-  });
 }

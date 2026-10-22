@@ -1,0 +1,7 @@
+# EXAMPLE ONLY. No usable credentials. Never commit .dev.vars.
+# Production: wrangler secret put BOT_TOKEN / WEBHOOK_SECRET / ADMIN_IDS
+BOT_TOKEN="REPLACE_WITH_YOUR_BOTFATHER_TOKEN"
+WEBHOOK_SECRET="REPLACE_WITH_RANDOM_64_HEX_CHARACTERS"
+# Two distinct positive numeric Telegram user IDs, no spaces, not group IDs.
+# Both admins must first open this bot privately and send /start.
+ADMIN_IDS="REPLACE_ADMIN_1_ID,REPLACE_ADMIN_2_ID"

@@ -1,0 +1,38 @@
+✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (295.5546ms)
+✔ both admins get unmodified copy and durable message-id reply routing independent of captions (253.5801ms)
+✔ Telegram failures never claim delivery and one failing admin does not prevent the other (1081.9329ms)
+✔ duplicate update is atomically claimed once even under concurrency (243.924ms)
+✔ durable transactional rate gate caps concurrent new messages at six per minute (288.193ms)
+✔ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (259.6503ms)
+✔ invalid JSON/update/config is rejected without effects; unsupported identity-bearing content is not relayed (518.0849ms)
+✔ retention alarm deletes expired metadata but preserves active routes and block list (431.6652ms)
+✖ unblock receipt works after routing metadata expires without exposing Telegram user ID (224.4175ms)
+✔ webhook fails closed for missing/wrong configuration and secret; no public registration (331.7567ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4287.1643
+
+✖ failing tests:
+
+test at test\worker.test.js:163:1
+✖ unblock receipt works after routing metadata expires without exposing Telegram user ID (224.4175ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /\/unblock [a-f0-9-]{36}/. Input:
+  
+  'فرستنده مسدود شد.'
+  
+      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:169:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'فرستنده مسدود شد.',
+    expected: /\/unblock [a-f0-9-]{36}/,
+    operator: 'match',
+    diff: 'simple'
+  }

@@ -1,0 +1,32 @@
+✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (280.6174ms)
+✔ both admins get unmodified copy and durable message-id reply routing independent of captions (241.2684ms)
+✖ Telegram failures never claim delivery and one failing admin does not prevent the other (203.5766ms)
+✔ webhook fails closed for missing/wrong configuration and secret; no public registration (345.7835ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1427.224
+
+✖ failing tests:
+
+test at test\worker.test.js:67:1
+✖ Telegram failures never claim delivery and one failing admin does not prevent the other (203.5766ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  500 !== 200
+  
+      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:75:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 500,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,16 @@
+✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (345.926ms)
+✔ both admins get unmodified copy and durable message-id reply routing independent of captions (277.3317ms)
+✔ Telegram failures never claim delivery and one failing admin does not prevent the other (1221.3462ms)
+✔ duplicate update is atomically claimed once even under concurrency (272.1501ms)
+✔ durable transactional rate gate caps concurrent new messages at six per minute (300.9904ms)
+✔ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (283.8362ms)
+✔ invalid JSON/update/config is rejected without effects; unsupported identity-bearing content is not relayed (576.731ms)
+✔ webhook fails closed for missing/wrong configuration and secret; no public registration (366.6713ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4053.8168

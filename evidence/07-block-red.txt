@@ -1,0 +1,35 @@
+✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (296.3616ms)
+✔ both admins get unmodified copy and durable message-id reply routing independent of captions (259.922ms)
+✔ Telegram failures never claim delivery and one failing admin does not prevent the other (1069.8064ms)
+✔ duplicate update is atomically claimed once even under concurrency (237.7856ms)
+✔ durable transactional rate gate caps concurrent new messages at six per minute (352.024ms)
+✖ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (232.9397ms)
+✔ webhook fails closed for missing/wrong configuration and secret; no public registration (337.4817ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 6
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3146.5063
+
+✖ failing tests:
+
+test at test\worker.test.js:104:1
+✖ either private authenticated admin can block and unblock by stored route, not text or user-supplied IDs (232.9397ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /مسدود شد/. Input:
+  
+  '✅ پاسخ ارسال شد (به معنای خوانده شدن نیست).'
+  
+      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:110:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '✅ پاسخ ارسال شد (به معنای خوانده شدن نیست).',
+    expected: /مسدود شد/,
+    operator: 'match',
+    diff: 'simple'
+  }

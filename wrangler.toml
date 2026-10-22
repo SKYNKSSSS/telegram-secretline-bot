@@ -1,7 +1,17 @@
-name = "anon-inbox"
+name = "otaku-secretline"
 main = "worker.js"
-compatibility_date = "2025-01-01"
-keep_vars = true
+compatibility_date = "2026-07-01"
+workers_dev = true
 
-[vars]
-REPO_URL = "https://github.com/NotPouria/telegram-secretline-bot"
+# Configure BOT_TOKEN, WEBHOOK_SECRET and ADMIN_IDS with wrangler secret put.
+# No real identifiers, credentials, or registration endpoint in this repository.
+[[durable_objects.bindings]]
+name = "INBOX"
+class_name = "Inbox"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Inbox"]
+
+[observability]
+enabled = false
