@@ -1,4 +1,4 @@
-✖ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (172.2412ms)
+✖ Persian welcome explains operator privacy and offers default categories only in private chat (172.2412ms)
 ✔ webhook fails closed for missing/wrong configuration and secret; no public registration (304.1516ms)
 ℹ tests 2
 ℹ suites 0
@@ -12,12 +12,12 @@
 ✖ failing tests:
 
 test at test\worker.test.js:30:1
-✖ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (172.2412ms)
+✖ Persian welcome explains operator privacy and offers default categories only in private chat (172.2412ms)
   AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
   
   0 !== 1
   
-      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:33:10)
+      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/telegram-anonymous-inbox/test/worker.test.js:33:10)
       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
       at async Test.run (node:internal/test_runner/test:1404:7)
       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {

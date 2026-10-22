@@ -38,14 +38,12 @@ async function harness(t, options = {}) {
   });
   return {mf, calls, send, close};
 }
-test('Persian Otaku welcome explains operator privacy and offers requested categories only in private chat', async t => {
+test('Persian welcome explains operator privacy and offers default categories only in private chat', async t => {
   const h = await harness(t);
   await h.send(msg(10,33,{text:'/start'}));
   assert.equal(h.calls.length,1);
-  assert.match(h.calls[0].text,/اوتاکو/);
-  assert.match(h.calls[0].text,/نگاه آشنا/);
   assert.match(h.calls[0].text,/اپراتور/);
-  assert.deepEqual(h.calls[0].reply_markup.keyboard.flat(),['پیشنهاد کتاب','انتقاد','ارتباط با انتشارات']);
+  assert.deepEqual(h.calls[0].reply_markup.keyboard.flat(),['پیشنهاد','انتقاد','پرسش']);
   await h.send(msg(11,11,{text:'/start',chat:{id:-100,type:'supergroup'}}));
   await h.send(msg(12,11,{text:'/start',from:{id:99}}));
   assert.equal(h.calls.length,1);
@@ -55,12 +53,12 @@ test('Persian Otaku welcome explains operator privacy and offers requested categ
 
 test('both admins get unmodified copy and durable message-id reply routing independent of captions', async t => {
   const h = await harness(t);
-  await h.send(msg(20,33,{text:'پیشنهاد کتاب'}));
+  await h.send(msg(20,33,{text:'پیشنهاد'}));
   await h.send(msg(21,33,{text:undefined,photo:[{file_id:'mock'}],caption:'آ'.repeat(1024)}));
   const copies = h.calls.filter(c => c.method === 'copyMessage');
   assert.deepEqual(copies.map(c => String(c.chat_id)),['11','22']);
   assert.ok(copies.every(c => c.caption === undefined && c.from_chat_id === 33 && c.message_id === 121));
-  const headers = h.calls.filter(c => c.text?.includes('موضوع: پیشنهاد کتاب'));
+  const headers = h.calls.filter(c => c.text?.includes('موضوع: پیشنهاد'));
   assert.equal(headers.length,2);
   assert.ok(headers.every(c => !c.text.includes('33')));
   for (const admin of [11,22]) {
@@ -151,7 +149,7 @@ test('retention alarm deletes expired metadata but preserves active routes and b
   const h=await harness(t,{probe:true});
   await h.send(msg(600));
   const bindings=await h.mf.getBindings();
-  const stub=bindings.INBOX.get(bindings.INBOX.idFromName('otaku-inbox-v1'));
+  const stub=bindings.INBOX.get(bindings.INBOX.idFromName('inbox-v1'));
   const sql=async (q)=> (await stub.fetch('https://internal/test-sql',{method:'POST',body:JSON.stringify({sql:q})})).json();
   await sql('INSERT INTO blocked VALUES (99,NULL)');
   await sql("INSERT INTO categories VALUES (99,'test',0)");
@@ -174,7 +172,7 @@ test('unblock receipt works after routing metadata expires without exposing Tele
   assert.match(receipt,/\/unblock [a-f0-9-]{36}/);
   const command=receipt.match(/\/unblock [a-f0-9-]{36}/)[0];
   const bindings=await h.mf.getBindings();
-  const stub=bindings.INBOX.get(bindings.INBOX.idFromName('otaku-inbox-v1'));
+  const stub=bindings.INBOX.get(bindings.INBOX.idFromName('inbox-v1'));
   await stub.fetch('https://internal/test-sql',{method:'POST',body:JSON.stringify({sql:'DELETE FROM routes'})});
   await h.send(msg(702,22,{text:command}));
   assert.match(h.calls.at(-1).text,/رفع شد/);
@@ -184,7 +182,7 @@ test('unblock receipt works after routing metadata expires without exposing Tele
 });
 
 test('real SQLite persistence retains routes, category, dedup, rate and blocks across workerd restart', async t => {
-  const dir=mkdtempSync(join(process.env.TMPDIR || tmpdir(),'otaku-test-'));
+  const dir=mkdtempSync(join(process.env.TMPDIR || tmpdir(),'inbox-test-'));
   let h;
   try {
     h=await harness(t,{persist:dir});

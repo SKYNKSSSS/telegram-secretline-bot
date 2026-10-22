@@ -1,4 +1,4 @@
-✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (323.9238ms)
+✔ Persian welcome explains operator privacy and offers default categories only in private chat (323.9238ms)
 ✔ both admins get unmodified copy and durable message-id reply routing independent of captions (261.2835ms)
 ✔ Telegram failures never claim delivery and one failing admin does not prevent the other (1191.3625ms)
 ✔ duplicate update is atomically claimed once even under concurrency (264.0421ms)
@@ -24,7 +24,7 @@ test at test\worker.test.js:145:1
   
   501 !== 200
   
-      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:156:10)
+      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/telegram-anonymous-inbox/test/worker.test.js:156:10)
       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
       at async Test.run (node:internal/test_runner/test:1404:7)
       at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {

@@ -1,4 +1,4 @@
-✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (238.1359ms)
+✔ Persian welcome explains operator privacy and offers default categories only in private chat (238.1359ms)
 ✔ webhook fails closed for missing/wrong configuration and secret; no public registration (288.607ms)
 ℹ tests 2
 ℹ suites 0

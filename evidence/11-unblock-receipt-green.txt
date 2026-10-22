@@ -1,4 +1,4 @@
-✔ Persian Otaku welcome explains operator privacy and offers requested categories only in private chat (301.5346ms)
+✔ Persian welcome explains operator privacy and offers default categories only in private chat (301.5346ms)
 ✔ both admins get unmodified copy and durable message-id reply routing independent of captions (248.2206ms)
 ✔ Telegram failures never claim delivery and one failing admin does not prevent the other (1112.6863ms)
 ✔ duplicate update is atomically claimed once even under concurrency (240.1589ms)

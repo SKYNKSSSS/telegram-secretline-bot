@@ -1,8 +1,9 @@
-// Otaku Club customization of NotPouria/telegram-secretline-bot. MIT; see LICENSE.
+// Hardened two-way anonymous relay bot for Telegram on Cloudflare Workers.
+// Based on NotPouria/telegram-secretline-bot (MIT). See LICENSE.
 const FAILURE = '⚠️ ارسال تأیید نشد؛ ممکن است تحویل شده باشد. ارسال خودکار تکرار نمی‌شود. کمی بعد دوباره تلاش کنید؛ ممکن است نسخه تکراری ایجاد شود.';
-const CATEGORIES = ['پیشنهاد کتاب','انتقاد','ارتباط با انتشارات'];
+const CATEGORIES = ['پیشنهاد','انتقاد','پرسش'];
 const PRIVACY = 'نام و نام کاربری به مدیران در پیام کپی‌شده نمایش داده نمی‌شود؛ اما تلگرام، Cloudflare و اپراتور ربات می‌توانند به شناسه و محتوای پیام دسترسی داشته باشند. ناشناسی مطلق یا رمزنگاری سرتاسری نیست. متن، صدا و فایل شما ممکن است هویتتان را آشکار کند. شناسه مسیر و دسته تا ۳۰ روز، شناسه آپدیت تا ۷ روز و مسدودی تا رفع آن نگهداری می‌شود. متن پیام در پایگاه داده ربات ذخیره نمی‌شود؛ نسخه‌های تلگرام و پشتیبان زیرساخت تابع سیاست آن خدمات هستند.';
-const WELCOME = 'سلام! به باشگاه اوتاکو انتشارات نگاه آشنا خوش آمدید. موضوع را انتخاب کنید و پیام بفرستید؛ پاسخ همین‌جا می‌آید.\n\n' + PRIVACY;
+const WELCOME = 'سلام! به صندوق پیام ناشناس خوش آمدید. موضوع را انتخاب کنید و پیام بفرستید؛ پاسخ همین‌جا می‌آید.\n\n' + PRIVACY;
 export default {
   async fetch(request, env) {
     if (new URL(request.url).pathname !== '/webhook') return new Response('Not found', {status:404});
@@ -28,7 +29,7 @@ export default {
     catch { return new Response('Invalid JSON', {status:400}); }
     if (!Number.isSafeInteger(update?.update_id) || update.update_id < 0) return new Response('Invalid update', {status:400});
     try {
-      return await env.INBOX.get(env.INBOX.idFromName('otaku-inbox-v1')).fetch(new Request(request.url,{method:'POST',body:JSON.stringify(update)}));
+      return await env.INBOX.get(env.INBOX.idFromName('inbox-v1')).fetch(new Request(request.url,{method:'POST',body:JSON.stringify(update)}));
     } catch { return new Response('Temporary failure', {status:503}); }
   },
 };
@@ -143,7 +144,7 @@ export class Inbox {
         if (!copied) continue;
         this.route(recipient,copied.message_id,user);
         delivered++;
-        const header = await this.send(recipient,`📩 باشگاه اوتاکو | موضوع: ${category}\nبرای پاسخ، /block یا /unblock روی این پیام یا پیام بالا ریپلای کنید.`,{reply_parameters:{message_id:copied.message_id}});
+        const header = await this.send(recipient,`📩 پیام ناشناس | موضوع: ${category}\nبرای پاسخ، /block یا /unblock روی این پیام یا پیام بالا ریپلای کنید.`,{reply_parameters:{message_id:copied.message_id}});
         if (header) this.route(recipient,header.message_id,user);
       }
       await this.send(user,delivered === admins.length ? '✅ پیام برای مدیران ارسال شد (به معنای خوانده شدن نیست).' : delivered ? '⚠️ پیام فقط به بخشی از مدیران رسید؛ ارسال دوباره ممکن است نسخه تکراری ایجاد کند.' : FAILURE);

@@ -16,7 +16,7 @@ test at test\worker.test.js:32:1
   
   200 !== 403
   
-      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/otaku-secretline/test/worker.test.js:34:10)
+      at TestContext.<anonymous> (file:///C:/Users/GIGABYTE-SMT/Projects/telegram-anonymous-inbox/test/worker.test.js:34:10)
       at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
       at async Test.run (node:internal/test_runner/test:1404:7)
       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
