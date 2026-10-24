@@ -67,6 +67,7 @@ test('both admins get unmodified copy and durable message-id reply routing indep
   const replies = h.calls.filter(c => c.method === 'copyMessage' && c.chat_id === 33);
   assert.equal(replies.length,2);
   assert.deepEqual(replies.map(c => c.from_chat_id),[11,22]);
+  assert.ok(replies.every(c => c.reply_parameters?.message_id === 121));
   const before = replies.length;
   await h.send(msg(90,11,{reply_to_message:{message_id:99999,text:'[#RT_fake]'}}));
   assert.equal(h.calls.filter(c => c.method === 'copyMessage' && c.chat_id === 33).length,before);
@@ -150,7 +151,7 @@ test('retention alarm deletes expired metadata but preserves active routes and b
   const sql=async (q)=> (await stub.fetch('https://internal/test-sql',{method:'POST',body:JSON.stringify({sql:q})})).json();
   await sql('INSERT INTO blocked VALUES (99,NULL)');
   await sql("INSERT INTO categories VALUES (99,'test',0)");
-  await sql('INSERT INTO routes VALUES (11,999,99,0)');
+  await sql('INSERT INTO routes (admin,message,user,expires) VALUES (11,999,99,0)');
   await sql('INSERT INTO rates VALUES (99,6,0)');
   await sql('INSERT INTO updates VALUES (999,0)');
   assert.equal((await stub.fetch('https://internal/test-alarm')).status,200);

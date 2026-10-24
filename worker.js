@@ -43,6 +43,7 @@ export class Inbox {
       CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, expires INTEGER);
       CREATE TABLE IF NOT EXISTS rates (user INTEGER PRIMARY KEY, count INTEGER, expires INTEGER);
       CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);`);
+    try { this.sql.exec('ALTER TABLE routes ADD COLUMN source INTEGER'); } catch {}
   }
   async alarm() {
     const now = Date.now();
@@ -67,8 +68,8 @@ export class Inbox {
 
   }
   send(chat_id, text, extra={}) { return this.api('sendMessage', {chat_id,text,...extra}); }
-  route(admin, message, user) {
-    this.sql.exec('INSERT OR REPLACE INTO routes VALUES (?,?,?,?)',String(admin),message,user,Date.now()+30*86400000);
+  route(admin, message, user, source) {
+    this.sql.exec('INSERT OR REPLACE INTO routes (admin,message,user,source,expires) VALUES (?,?,?,?,?)',String(admin),message,user,source,Date.now()+30*86400000);
   }
   async fetch(request) {
     if (await this.ctx.storage.getAlarm() === null) await this.ctx.storage.setAlarm(Date.now()+3600000);
@@ -115,7 +116,7 @@ export class Inbox {
       await this.send(user,admin ? 'پنل مدیر: برای پاسخ روی پیام دریافتی ریپلای کنید.' : WELCOME,
         {reply_markup:{keyboard:CATEGORIES.map(x => [x]),resize_keyboard:true}});
     } else if (admin) {
-      const route = [...this.sql.exec('SELECT user FROM routes WHERE admin=? AND message=? AND expires>?',String(user),m.reply_to_message?.message_id ?? -1,Date.now())][0];
+      const route = [...this.sql.exec('SELECT user,source FROM routes WHERE admin=? AND message=? AND expires>?',String(user),m.reply_to_message?.message_id ?? -1,Date.now())][0];
       if (!route) await this.send(user,'مسیر پاسخ یافت نشد یا منقضی شده است. روی پیام دریافتی ریپلای کنید.');
       else if (m.text === '/block') {
         this.sql.exec('INSERT OR IGNORE INTO blocked VALUES (?,?)',route.user,crypto.randomUUID());
@@ -125,7 +126,7 @@ export class Inbox {
         this.sql.exec('DELETE FROM blocked WHERE user=?',route.user);
         await this.send(user,'مسدودی فرستنده رفع شد.');
       } else {
-        const result = await this.api('copyMessage',{chat_id:route.user,from_chat_id:user,message_id:m.message_id});
+        const result = await this.api('copyMessage',{chat_id:route.user,from_chat_id:user,message_id:m.message_id,...(route.source ? {reply_parameters:{message_id:route.source}} : {})});
         await this.send(user,result ? '✅ پاسخ ارسال شد (به معنای خوانده شدن نیست).' : FAILURE);
       }
     } else if (CATEGORIES.includes(m.text)) {
@@ -137,10 +138,10 @@ export class Inbox {
       for (const recipient of admins) {
         const copied = await this.api('copyMessage',{chat_id:recipient,from_chat_id:user,message_id:m.message_id});
         if (!copied) continue;
-        this.route(recipient,copied.message_id,user);
+        this.route(recipient,copied.message_id,user,m.message_id);
         delivered++;
         const header = await this.send(recipient,`📩 پیام ناشناس | موضوع: ${category}\nبرای پاسخ، /block یا /unblock روی این پیام یا پیام بالا ریپلای کنید.`,{reply_parameters:{message_id:copied.message_id}});
-        if (header) this.route(recipient,header.message_id,user);
+        if (header) this.route(recipient,header.message_id,user,m.message_id);
       }
       await this.send(user,delivered === admins.length ? '✅ پیام شما ارسال شد. لطفاً منتظر پاسخ باشید.' : delivered ? '⚠️ پیام فقط به بخشی از مدیران رسید؛ لطفاً منتظر پاسخ باشید. ارسال دوباره ممکن است نسخه تکراری ایجاد کند.' : FAILURE);
     }
