@@ -142,7 +142,7 @@ export class Inbox {
         const header = await this.send(recipient,`📩 پیام ناشناس | موضوع: ${category}\nبرای پاسخ، /block یا /unblock روی این پیام یا پیام بالا ریپلای کنید.`,{reply_parameters:{message_id:copied.message_id}});
         if (header) this.route(recipient,header.message_id,user);
       }
-      await this.send(user,delivered === admins.length ? '✅ پیام برای مدیران ارسال شد (به معنای خوانده شدن نیست).' : delivered ? '⚠️ پیام فقط به بخشی از مدیران رسید؛ ارسال دوباره ممکن است نسخه تکراری ایجاد کند.' : FAILURE);
+      await this.send(user,delivered === admins.length ? '✅ پیام شما ارسال شد. لطفاً منتظر پاسخ باشید.' : delivered ? '⚠️ پیام فقط به بخشی از مدیران رسید؛ لطفاً منتظر پاسخ باشید. ارسال دوباره ممکن است نسخه تکراری ایجاد کند.' : FAILURE);
     }
     return new Response('OK');
   }
