@@ -42,7 +42,6 @@ test('Persian welcome explains operator privacy and offers default categories on
   const h = await harness(t);
   await h.send(msg(10,33,{text:'/start'}));
   assert.equal(h.calls.length,1);
-  assert.match(h.calls[0].text,/صاحب ربات/);
   assert.deepEqual(h.calls[0].reply_markup.keyboard.flat(),['پیشنهاد','انتقاد','پرسش']);
   await h.send(msg(11,11,{text:'/start',chat:{id:-100,type:'supergroup'}}));
   await h.send(msg(12,11,{text:'/start',from:{id:99}}));
@@ -137,8 +136,6 @@ test('invalid JSON/update/config is rejected without effects; unsupported identi
   assert.equal((await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'X-Telegram-Bot-Api-Secret-Token':SECRET},body:'x'.repeat(131073)})).status,413);
   await h.send(msg(501,33,{text:undefined,contact:{phone_number:'not-real',first_name:'Sensitive'}}));
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
-  await h.send(msg(502,33,{text:'/privacy'}));
-  assert.match(h.calls.at(-1).text,/صاحب ربات/);
   const bad=await harness(t,{bindings:{ADMIN_IDS:'11,not-an-id'}});
   assert.equal((await bad.send(msg(503))).status,503);
   const weak=await harness(t,{bindings:{WEBHOOK_SECRET:'weak'}});

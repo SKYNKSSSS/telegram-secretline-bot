@@ -2,8 +2,7 @@
 // Based on NotPouria/telegram-secretline-bot (MIT). See LICENSE.
 const FAILURE = '⚠️ ارسال تأیید نشد؛ ممکن است تحویل شده باشد. ارسال خودکار تکرار نمی‌شود. کمی بعد دوباره تلاش کنید؛ ممکن است نسخه تکراری ایجاد شود.';
 const CATEGORIES = ['پیشنهاد','انتقاد','پرسش'];
-const PRIVACY = '🔒 حریم خصوصی\n\nنام و نام کاربری شما در پیام ارسالی برای مدیران نمایش داده نمی‌شود. بااین‌حال، این سرویس ناشناسِ مطلق یا رمزنگاری‌شدهٔ سرتاسری نیست؛ تلگرام، Cloudflare و صاحب ربات می‌توانند به شناسه و محتوای پیام دسترسی داشته باشند.\n\nلطفاً اطلاعاتی که می‌تواند هویت شما را مشخص کند، مثل نام، شماره تلفن، نشانی، عکس یا صدای قابل‌شناسایی، ارسال نکنید. متن پیام در پایگاه دادهٔ این ربات ذخیره نمی‌شود، اما نسخهٔ پیام در تلگرام و گزارش‌های زیرساخت تابع سیاست همان سرویس‌هاست. اطلاعات فنی لازم برای پاسخ‌گویی حداکثر ۳۰ روز نگهداری می‌شود و سپس پاک‌سازی می‌گردد.';
-const WELCOME = 'سلام! 👋\nبه صندوق پیام خوش آمدید.\n\nموضوع پیام را انتخاب کنید و سپس پیام، عکس، فایل یا صدای خود را بفرستید. پاسخ مدیر همین‌جا برای شما ارسال می‌شود.\n\n' + PRIVACY + '\n\nبرای ادامه، یکی از موضوع‌های زیر را انتخاب کنید:';
+const WELCOME = 'سلام! 👋\nبه صندوق پیام خوش آمدید.\n\nموضوع پیام را انتخاب کنید و سپس پیام، عکس، فایل یا صدای خود را بفرستید. پاسخ مدیر همین‌جا برای شما ارسال می‌شود.\n\nبرای ادامه، یکی از موضوع‌های زیر را انتخاب کنید:';
 export default {
   async fetch(request, env) {
     if (new URL(request.url).pathname !== '/webhook') return new Response('Not found', {status:404});
@@ -102,10 +101,6 @@ export class Inbox {
     if (admin && unblock) {
       const result = [...this.sql.exec('DELETE FROM blocked WHERE handle=? RETURNING user',unblock[1])];
       await this.send(user,result.length ? 'مسدودی فرستنده رفع شد.' : 'رسید مسدودی یافت نشد.');
-      return new Response('OK');
-    }
-    if (m.text === '/privacy') {
-      await this.send(user,PRIVACY);
       return new Response('OK');
     }
     if (!['text','photo','video','voice','audio','document','sticker','video_note','animation'].some(type => m[type])) {
