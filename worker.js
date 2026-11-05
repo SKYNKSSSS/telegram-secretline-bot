@@ -140,18 +140,22 @@ export class Inbox {
   }
 
   async fetchLivePrice(url) {
-    if (!url || !/^https:\/\//i.test(url)) return '';
+    if (!url || !/^https:\/\//i.test(url)) return null;
     try {
       const res = await fetch(url,{headers:{'user-agent':'Mozilla/5.0 (compatible; TelegramBookSearch/1.0)'},signal:AbortSignal.timeout(8000)});
-      if (!res.ok) return '';
+      if (!res.ok) return null;
       const html = await res.text();
       const singleStart = html.search(/woo-price-single/i);
       const scoped = singleStart >= 0 ? html.slice(singleStart, singleStart + 12000) : html;
       const block = scoped.match(/<p[^>]*class=["'][^"']*\bprice\b[^"']*["'][^>]*>[\s\S]*?<\/p>/i)?.[0] ?? '';
-      const ins = block.match(/<ins[\s\S]*?<\/ins>/i)?.[0] ?? '';
-      const amount = (ins || block).match(/(?:<bdi>|<span[^>]*class=["'][^"']*amount[^"']*["'][^>]*>)([۰-۹0-9,٬.]+)\s*(?:&nbsp;|<[^>]*>)*تومان/i)?.[1];
-      return amount ? amount.replace(/٬/g,',') : '';
-    } catch { return ''; }
+      const textPrice = htmlPart => {
+        const n = htmlPart.match(/([۰-۹0-9,٬.]+)\s*(?:&nbsp;|<[^>]*>)*تومان/i)?.[1];
+        return n ? n.replace(/٬/g,',') : '';
+      };
+      const regular = textPrice(block.match(/<del[\s\S]*?<\/del>/i)?.[0] ?? block);
+      const sale = textPrice(block.match(/<ins[\s\S]*?<\/ins>/i)?.[0] ?? block);
+      return regular || sale ? {regular:regular || sale, sale:sale || regular} : null;
+    } catch { return null; }
   }
 
   formatBookDetails(b) {
@@ -162,7 +166,8 @@ export class Inbox {
     if (b.year && b.year !== '-') lines.push(`سال انتشار: ${b.year}`);
     if (b.size && b.size !== '-') lines.push(`سایز: ${b.size}`);
     if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${b.isbn}`);
-    if (b.livePrice) lines.push(`قیمت فعلی سایت: ${b.livePrice} تومان`);
+    if (b.livePrice?.regular) lines.push(`قیمت اصلی سایت: ${b.livePrice.regular} تومان`);
+    if (b.livePrice?.sale) lines.push(`قیمت با تخفیف: ${b.livePrice.sale} تومان`);
     if (b.link && b.link !== '-') lines.push(`لینک محصول: ${b.link}`);
     return lines.join('\n');
   }
