@@ -133,7 +133,7 @@ export class Inbox {
       const matches = haystack.includes(q) || tokens.every(t => haystack.includes(t));
       const exact = normalizeSearch(title) === q ? 2 : haystack.includes(q) ? 1 : 0;
       return {r, title, author, translator, matches, exact};
-    }).filter(x => x.matches).sort((a,b) => b.exact - a.exact || a.title.length - b.title.length).slice(0,5).map(x => {
+    }).filter(x => x.matches).sort((a,b) => b.exact - a.exact || a.title.length - b.title.length).map(x => {
       const get = key => fields[key] >= 0 ? (x.r[fields[key]] ?? '').trim() : '';
       return {title:x.title.trim(), volume:get('volume'), series:get('series'), isbn:get('isbn'), year:get('year'), size:get('size'), pages:get('pages'), author:x.author.trim(), translator:x.translator.trim(), link:get('link')};
     });
