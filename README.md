@@ -86,7 +86,7 @@ $base = "https://api.telegram.org/bot$($env:BOT_TOKEN)"
 $payload = @{
   url = "$($env:WORKER_URL)/webhook"
   secret_token = $env:WEBHOOK_SECRET
-  allowed_updates = @("message")
+  allowed_updates = @("message", "callback_query")
   max_connections = 1
   drop_pending_updates = $false
 } | ConvertTo-Json
