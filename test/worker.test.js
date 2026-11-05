@@ -19,7 +19,7 @@ async function harness(t, options = {}) {
     modules: true, script, compatibilityDate: '2026-07-01',
     ...(script.includes('export class Inbox') ? {durableObjects: {INBOX: {className:options.probe?'Probe':'Inbox', useSQLite:true}}} : {}),
     ...(options.persist ? {durableObjectsPersist:options.persist} : {}),
-    bindings: { BOT_TOKEN:'test-only-not-a-real-token', ADMIN_ID:'11', ADMIN_IDS:'11,22', WEBHOOK_SECRET:SECRET, ...options.bindings },
+    bindings: { BOT_TOKEN:'test-only-not-a-real-token', ADMIN_ID:'11', ADMIN_IDS:'11,22', WEBHOOK_SECRET:SECRET, BOOKS_CSV_URL:'data:text/csv,%D8%B9%D9%86%D9%88%D8%A7%D9%86%2C%D8%B4%D9%85%D8%A7%D8%B1%D9%87%20%D8%AC%D9%84%D8%AF%2C%D9%86%D9%88%DB%8C%D8%B3%D9%86%D8%AF%D9%87%2C%D9%85%D8%AA%D8%B1%D8%AC%D9%85%2C%D8%AA%D8%B9%D8%AF%D8%A7%D8%AF%20%D8%B5%D9%81%D8%AD%D8%A7%D8%AA%2C%D9%84%DB%8C%D9%86%DA%A9%20%D9%85%D8%AD%D8%B5%D9%88%D9%84%20%D8%AF%D8%B1%20%D8%B3%D8%A7%DB%8C%D8%AA%0A%D9%87%D8%A7%D8%A8%DB%8C%D8%AA%2C1%2C%D8%AC%DB%8C%20%D8%A2%D8%B1%20%D8%A2%D8%B1%20%D8%AA%D8%A7%D9%84%DA%A9%DB%8C%D9%86%2C%D8%B7%D8%A7%D9%87%D8%B1%D9%87%20%D8%B4%DA%A9%D9%88%D8%B1%DB%8C%2C264%2Chttps%3A%2F%2Fexample.com%2Fhobbit', ...options.bindings },
     outboundService: async (req) => {
       assert.equal(new URL(req.url).hostname, 'api.telegram.org', 'no other network destinations allowed');
       const payload = JSON.parse(await req.text());
@@ -42,12 +42,22 @@ test('Persian welcome explains operator privacy and offers default categories on
   const h = await harness(t);
   await h.send(msg(10,33,{text:'/start'}));
   assert.equal(h.calls.length,1);
-  assert.deepEqual(h.calls[0].reply_markup.keyboard.flat(),['پیشنهاد','انتقاد','پرسش']);
+  assert.deepEqual(h.calls[0].reply_markup.keyboard.flat(),['پیشنهاد','انتقاد','پرسش','🔎 جستجوی کتاب']);
   await h.send(msg(11,11,{text:'/start',chat:{id:-100,type:'supergroup'}}));
   await h.send(msg(12,11,{text:'/start',from:{id:99}}));
   assert.equal(h.calls.length,1);
   await h.send(msg(13,22,{text:'/start'}));
   assert.match(h.calls[1].text,/مدیر/);
+});
+
+test('book search returns matches by title, author and translator without relaying to admins', async t => {
+  const h=await harness(t);
+  await h.send(msg(15,33,{text:'🔎 جستجوی کتاب'}));
+  assert.match(h.calls.at(-1).text,/نام کتاب/);
+  await h.send(msg(16,33,{text:'تالکین'}));
+  assert.match(h.calls.at(-1).text,/هابیت/);
+  assert.match(h.calls.at(-1).text,/طاهره شکوری/);
+  assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
 });
 
 test('both admins get unmodified copy and durable message-id reply routing independent of captions', async t => {

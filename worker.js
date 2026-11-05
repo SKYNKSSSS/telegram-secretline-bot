@@ -1,8 +1,36 @@
 // Hardened two-way anonymous relay bot for Telegram on Cloudflare Workers.
 // Based on NotPouria/telegram-secretline-bot (MIT). See LICENSE.
 const FAILURE = '⚠️ ارسال تأیید نشد؛ ممکن است تحویل شده باشد. ارسال خودکار تکرار نمی‌شود. کمی بعد دوباره تلاش کنید؛ ممکن است نسخه تکراری ایجاد شود.';
-const CATEGORIES = ['پیشنهاد','انتقاد','پرسش'];
+const BOOK_SEARCH = '🔎 جستجوی کتاب';
+const CATEGORIES = ['پیشنهاد','انتقاد','پرسش',BOOK_SEARCH];
 const WELCOME = 'سلام! 👋\nبه صندوق پیام خوش آمدید.\n\nموضوع پیام را انتخاب کنید و سپس پیام، عکس، فایل یا صدای خود را بفرستید. پاسخ مدیر همین‌جا برای شما ارسال می‌شود.\n\nبرای ادامه، یکی از موضوع‌های زیر را انتخاب کنید:';
+function normalizeSearch(value = '') {
+  return String(value).toLocaleLowerCase('fa-IR')
+    .replace(/[يى]/g, 'ی').replace(/[ك]/g, 'ک')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[\u200c\u200d\u200f]/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+function parseCsv(text) {
+  const rows = []; let row = []; let cell = ''; let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (quoted && text[i + 1] === '"') { cell += '"'; i++; }
+      else quoted = !quoted;
+    } else if (ch === ',' && !quoted) { row.push(cell); cell = ''; }
+    else if ((ch === '\n' || ch === '\r') && !quoted) {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some(x => x.trim())) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); if (row.some(x => x.trim())) rows.push(row); }
+  return rows;
+}
+
 export default {
   async fetch(request, env) {
     if (new URL(request.url).pathname !== '/webhook') return new Response('Not found', {status:404});
@@ -38,6 +66,7 @@ export class Inbox {
     this.ctx = ctx;
     this.env = env;
     this.sql = ctx.storage.sql;
+    this.booksCache = null;
     this.sql.exec(`CREATE TABLE IF NOT EXISTS routes (admin TEXT, message INTEGER, user INTEGER, expires INTEGER, PRIMARY KEY(admin,message));
       CREATE TABLE IF NOT EXISTS categories (user INTEGER PRIMARY KEY, category TEXT, expires INTEGER);
       CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, expires INTEGER);
@@ -67,6 +96,59 @@ export class Inbox {
     } catch { return null; } // No tokens, payloads or Telegram error descriptions in logs.
 
   }
+
+  async searchBooks(query) {
+    const url = this.env.BOOKS_CSV_URL;
+    if (!url) return [];
+    let rows;
+    if (this.booksCache && this.booksCache.expires > Date.now()) rows = this.booksCache.rows;
+    else {
+      try {
+        const res = await fetch(url, {signal: AbortSignal.timeout(8000)});
+        if (!res.ok) return [];
+        rows = parseCsv(await res.text());
+        this.booksCache = {rows, expires: Date.now() + 15 * 60 * 1000};
+      } catch { return []; }
+    }
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(normalizeSearch);
+    const index = name => headers.indexOf(normalizeSearch(name));
+    const fields = {title:index('عنوان'), volume:index('شماره جلد'), series:index('چند جلدی'), isbn:index('شابک'), year:index('سال انتشار'), size:index('سایز'), pages:index('تعداد صفحات'), author:index('نویسنده'), translator:index('مترجم'), link:index('لینک محصول در سایت')};
+    const q = normalizeSearch(query);
+    if (!q) return [];
+    const tokens = q.split(' ');
+    return rows.slice(1).map(r => {
+      const title = r[fields.title] ?? ''; const author = r[fields.author] ?? ''; const translator = r[fields.translator] ?? '';
+      const haystack = normalizeSearch([title, author, translator].join(' '));
+      const matches = haystack.includes(q) || tokens.every(t => haystack.includes(t));
+      const exact = normalizeSearch(title) === q ? 2 : haystack.includes(q) ? 1 : 0;
+      return {r, title, author, translator, matches, exact};
+    }).filter(x => x.matches).sort((a,b) => b.exact - a.exact || a.title.length - b.title.length).slice(0,5).map(x => {
+      const get = key => fields[key] >= 0 ? (x.r[fields[key]] ?? '').trim() : '';
+      return {title:x.title.trim(), volume:get('volume'), series:get('series'), isbn:get('isbn'), year:get('year'), size:get('size'), pages:get('pages'), author:x.author.trim(), translator:x.translator.trim(), link:get('link')};
+    });
+  }
+
+  async sendBookResults(user, query) {
+    const results = await this.searchBooks(query);
+    if (!results.length) {
+      await this.send(user, `نتیجه‌ای برای «${query}» پیدا نشد. نام کتاب، نویسنده یا مترجم را دقیق‌تر بنویسید.`);
+      return;
+    }
+    const lines = [`📚 نتیجه جستجو برای «${query}»`, ''];
+    results.forEach((b,i) => {
+      lines.push(`${i+1}. ${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`);
+      if (b.author && b.author !== '-') lines.push(`نویسنده: ${b.author}`);
+      if (b.translator && b.translator !== '-') lines.push(`مترجم: ${b.translator}`);
+      if (b.pages && b.pages !== '-') lines.push(`صفحات: ${b.pages}`);
+      if (b.year && b.year !== '-') lines.push(`سال انتشار: ${b.year}`);
+      if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${b.isbn}`);
+      if (b.link && b.link !== '-') lines.push(`لینک: ${b.link}`);
+      lines.push('');
+    });
+    await this.send(user, lines.join('\n').trim());
+  }
+
   send(chat_id, text, extra={}) { return this.api('sendMessage', {chat_id,text,...extra}); }
   route(admin, message, user, source) {
     this.sql.exec('INSERT OR REPLACE INTO routes (admin,message,user,source,expires) VALUES (?,?,?,?,?)',String(admin),message,user,source,Date.now()+30*86400000);
@@ -111,6 +193,21 @@ export class Inbox {
     if (!admin && [...this.sql.exec('SELECT user FROM blocked WHERE user=?',user)].length) {
       await this.send(user,'ارسال پیام شما مسدود است.');
       return new Response('Blocked');
+    }
+    const savedCategory = [...this.sql.exec('SELECT category FROM categories WHERE user=? AND expires>?',user,Date.now())][0]?.category;
+    const commandQuery = /^\/کتاب(?:\s+(.+))?$/.exec(m.text ?? '');
+    if (!admin && m.text === BOOK_SEARCH) {
+      this.sql.exec('INSERT OR REPLACE INTO categories VALUES (?,?,?)',user,BOOK_SEARCH,Date.now()+30*86400000);
+      await this.send(user,'نام کتاب، نویسنده یا مترجم را بنویسید:');
+      return new Response('OK');
+    }
+    if (!admin && commandQuery?.[1]) {
+      await this.sendBookResults(user, commandQuery[1].trim());
+      return new Response('OK');
+    }
+    if (!admin && savedCategory === BOOK_SEARCH && m.text && !m.text.startsWith('/')) {
+      await this.sendBookResults(user, m.text.trim());
+      return new Response('OK');
     }
     if (m.text === '/start') {
       await this.send(user,admin ? 'پنل مدیر: برای پاسخ روی پیام دریافتی ریپلای کنید.' : WELCOME,

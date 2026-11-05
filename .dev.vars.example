@@ -5,3 +5,6 @@ WEBHOOK_SECRET="REPLACE_WITH_RANDOM_64_HEX_CHARACTERS"
 # Two distinct positive numeric Telegram user IDs, no spaces, not group IDs.
 # Both admins must first open this bot privately and send /start.
 ADMIN_IDS="REPLACE_ADMIN_1_ID,REPLACE_ADMIN_2_ID"
+
+# Public Google Sheets CSV endpoint used by the optional book search.
+BOOKS_CSV_URL="https://docs.google.com/spreadsheets/d/1xv2qDmF3Gx_c0TzgNeNz3p-HLs4ZzsuMh06pybVxsoU/export?format=csv&gid=454045525"

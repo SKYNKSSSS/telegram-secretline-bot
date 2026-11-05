@@ -3,6 +3,9 @@ main = "worker.js"
 compatibility_date = "2026-07-01"
 workers_dev = true
 
+[vars]
+BOOKS_CSV_URL = "https://docs.google.com/spreadsheets/d/1xv2qDmF3Gx_c0TzgNeNz3p-HLs4ZzsuMh06pybVxsoU/export?format=csv&gid=454045525"
+
 # Configure BOT_TOKEN, WEBHOOK_SECRET and ADMIN_IDS with wrangler secret put.
 # No real identifiers, credentials, or registration endpoint in this repository.
 [[durable_objects.bindings]]
