@@ -145,7 +145,9 @@ export class Inbox {
       const res = await fetch(url,{headers:{'user-agent':'Mozilla/5.0 (compatible; TelegramBookSearch/1.0)'},signal:AbortSignal.timeout(8000)});
       if (!res.ok) return '';
       const html = await res.text();
-      const block = html.match(/<p[^>]*class=["'][^"']*\bprice\b[^"']*["'][^>]*>[\s\S]*?<\/p>/i)?.[0] ?? '';
+      const singleStart = html.search(/woo-price-single/i);
+      const scoped = singleStart >= 0 ? html.slice(singleStart, singleStart + 12000) : html;
+      const block = scoped.match(/<p[^>]*class=["'][^"']*\bprice\b[^"']*["'][^>]*>[\s\S]*?<\/p>/i)?.[0] ?? '';
       const ins = block.match(/<ins[\s\S]*?<\/ins>/i)?.[0] ?? '';
       const amount = (ins || block).match(/(?:<bdi>|<span[^>]*class=["'][^"']*amount[^"']*["'][^>]*>)([۰-۹0-9,٬.]+)\s*(?:&nbsp;|<[^>]*>)*تومان/i)?.[1];
       return amount ? amount.replace(/٬/g,',') : '';
