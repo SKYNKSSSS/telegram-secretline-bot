@@ -55,15 +55,18 @@ test('book search returns matches by title, author and translator without relayi
   await h.send(msg(15,33,{text:'🔎 جستجوی کتاب'}));
   assert.match(h.calls.at(-1).text,/نام کتاب/);
   await h.send(msg(16,33,{text:'تالکین'}));
-  assert.match(h.calls.at(-1).text,/هابیت/);
-  assert.match(h.calls.at(-1).text,/طاهره شکوری/);
-  assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
-  await h.send(msg(17,33,{text:'هابیت'}));
+  const list = h.calls.at(-1);
+  assert.match(list.reply_markup.inline_keyboard[0][0].text,/هابیت/);
+  const callbackUpdate = {update_id:17,callback_query:{id:'cb-17',from:{id:33},message:{message_id:999,chat:{id:33,type:'private'}},data:list.reply_markup.inline_keyboard[0][0].callback_data}};
+  await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'content-type':'application/json','X-Telegram-Bot-Api-Secret-Token':SECRET},body:JSON.stringify(callbackUpdate)});
   assert.match(h.calls.at(-1).text,/جی آر آر تالکین/);
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
-  await h.send(msg(18,11,{text:'🔎 جستجوی کتاب'}));
-  await h.send(msg(19,11,{text:'تالکین'}));
-  assert.match(h.calls.at(-1).text,/هابیت/);
+  await h.send(msg(18,33,{text:'هابیت'}));
+  assert.match(h.calls.at(-1).reply_markup.inline_keyboard[0][0].text,/هابیت/);
+  assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
+  await h.send(msg(19,11,{text:'🔎 جستجوی کتاب'}));
+  await h.send(msg(20,11,{text:'تالکین'}));
+  assert.match(h.calls.at(-1).reply_markup.inline_keyboard[0][0].text,/هابیت/);
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
 });
 

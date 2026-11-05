@@ -71,18 +71,28 @@ export class Inbox {
       CREATE TABLE IF NOT EXISTS categories (user INTEGER PRIMARY KEY, category TEXT, expires INTEGER);
       CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, expires INTEGER);
       CREATE TABLE IF NOT EXISTS rates (user INTEGER PRIMARY KEY, count INTEGER, expires INTEGER);
-      CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);`);
+      CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);
+      CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, PRIMARY KEY(user,token));`);
     try { this.sql.exec('ALTER TABLE routes ADD COLUMN source INTEGER'); } catch {}
   }
   async alarm() {
     const now = Date.now();
     this.ctx.storage.transactionSync(() => {
-      for (const table of ['routes','categories','updates','rates']) {
+      for (const table of ['routes','categories','updates','rates','book_results']) {
         this.sql.exec(`DELETE FROM ${table} WHERE expires<=?`,now);
       }
     });
     // Hourly cleanup, including idle periods. Logical expiry is checked on lookup.
     await this.ctx.storage.setAlarm(now+3600000);
+  }
+  async rawApi(method, payload) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${this.env.BOT_TOKEN}/${method}`, {
+        method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload),
+        signal:AbortSignal.timeout(5000),
+      });
+      return await res.json();
+    } catch { return null; }
   }
   async api(method, payload) {
     try {
@@ -129,24 +139,32 @@ export class Inbox {
     });
   }
 
+  formatBookDetails(b) {
+    const lines = [`📚 ${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`];
+    if (b.author && b.author !== '-') lines.push(`نویسنده: ${b.author}`);
+    if (b.translator && b.translator !== '-') lines.push(`مترجم: ${b.translator}`);
+    if (b.pages && b.pages !== '-') lines.push(`تعداد صفحات: ${b.pages}`);
+    if (b.year && b.year !== '-') lines.push(`سال انتشار: ${b.year}`);
+    if (b.size && b.size !== '-') lines.push(`سایز: ${b.size}`);
+    if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${b.isbn}`);
+    if (b.link && b.link !== '-') lines.push(`لینک محصول: ${b.link}`);
+    return lines.join('\n');
+  }
+
   async sendBookResults(user, query) {
     const results = await this.searchBooks(query);
     if (!results.length) {
       await this.send(user, `نتیجه‌ای برای «${query}» پیدا نشد. نام کتاب، نویسنده یا مترجم را دقیق‌تر بنویسید.`);
       return;
     }
-    const lines = [`📚 نتیجه جستجو برای «${query}»`, ''];
-    results.forEach((b,i) => {
-      lines.push(`${i+1}. ${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`);
-      if (b.author && b.author !== '-') lines.push(`نویسنده: ${b.author}`);
-      if (b.translator && b.translator !== '-') lines.push(`مترجم: ${b.translator}`);
-      if (b.pages && b.pages !== '-') lines.push(`صفحات: ${b.pages}`);
-      if (b.year && b.year !== '-') lines.push(`سال انتشار: ${b.year}`);
-      if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${b.isbn}`);
-      if (b.link && b.link !== '-') lines.push(`لینک: ${b.link}`);
-      lines.push('');
-    });
-    await this.send(user, lines.join('\n').trim());
+    this.sql.exec('DELETE FROM book_results WHERE user=?',user);
+    const keyboard = [];
+    for (const b of results) {
+      const token = crypto.randomUUID();
+      this.sql.exec('INSERT INTO book_results VALUES (?,?,?,?,?)',user,token,b.title,JSON.stringify(b),Date.now()+15*60*1000);
+      keyboard.push([{text:`${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`,callback_data:`book:${token}`}]);
+    }
+    await this.send(user,`📚 نتایج جستجو برای «${query}»\n\nبرای دیدن مشخصات کامل، روی عنوان کتاب بزنید:`,{reply_markup:{inline_keyboard:keyboard}});
   }
 
   send(chat_id, text, extra={}) { return this.api('sendMessage', {chat_id,text,...extra}); }
@@ -156,6 +174,24 @@ export class Inbox {
   async fetch(request) {
     if (await this.ctx.storage.getAlarm() === null) await this.ctx.storage.setAlarm(Date.now()+3600000);
     const update = await request.json();
+    const callback = update.callback_query;
+    if (callback) {
+      const user = callback.from?.id;
+      const chat = callback.message?.chat;
+      if (chat?.type !== 'private' || chat.id !== user || !Number.isSafeInteger(user) || user <= 0) return new Response('Ignored');
+      const claimed = this.ctx.storage.transactionSync(() => {
+        if ([...this.sql.exec('SELECT id FROM updates WHERE id=?',update.update_id)].length) return false;
+        this.sql.exec('INSERT INTO updates VALUES (?,?)',update.update_id,Date.now()+7*86400000);
+        return true;
+      });
+      if (!claimed) return new Response('Duplicate');
+      const token = /^book:([a-f0-9-]{36})$/.exec(callback.data ?? '')?.[1];
+      const row = token ? [...this.sql.exec('SELECT details FROM book_results WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0] : null;
+      await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:row ? 'مشخصات کتاب ارسال شد.' : 'این نتیجه منقضی شده است.'});
+      if (row) await this.send(user,this.formatBookDetails(JSON.parse(row.details)));
+      else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
+      return new Response('OK');
+    }
     const m = update.message;
     if (!m || m.chat?.type !== 'private' || m.from?.id !== m.chat.id || !Number.isSafeInteger(m.from?.id) || m.from.id <= 0 || !Number.isSafeInteger(m.message_id) || m.message_id <= 0) return new Response('Ignored');
     // Claim durably BEFORE external side effects. Crash/timeout is not blindly retried.
