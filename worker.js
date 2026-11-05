@@ -196,20 +196,20 @@ export class Inbox {
     }
     const savedCategory = [...this.sql.exec('SELECT category FROM categories WHERE user=? AND expires>?',user,Date.now())][0]?.category;
     const commandQuery = /^\/کتاب(?:\s+(.+))?$/.exec(m.text ?? '');
-    if (!admin && m.text === BOOK_SEARCH) {
+    if (m.text === BOOK_SEARCH && !m.reply_to_message) {
       this.sql.exec('INSERT OR REPLACE INTO categories VALUES (?,?,?)',user,BOOK_SEARCH,Date.now()+30*86400000);
       await this.send(user,'نام کتاب، نویسنده یا مترجم را بنویسید:');
       return new Response('OK');
     }
-    if (!admin && commandQuery?.[1]) {
+    if (commandQuery?.[1] && !m.reply_to_message) {
       await this.sendBookResults(user, commandQuery[1].trim());
       return new Response('OK');
     }
-    if (!admin && savedCategory === BOOK_SEARCH && m.text && !m.text.startsWith('/')) {
+    if (savedCategory === BOOK_SEARCH && m.text && !m.text.startsWith('/') && !m.reply_to_message) {
       await this.sendBookResults(user, m.text.trim());
       return new Response('OK');
     }
-    if (!admin && m.text && !m.text.startsWith('/') && !CATEGORIES.includes(m.text)) {
+    if (m.text && !m.text.startsWith('/') && !CATEGORIES.includes(m.text) && !m.reply_to_message) {
       const automaticMatches = await this.searchBooks(m.text.trim());
       if (automaticMatches.length) {
         await this.sendBookResults(user, m.text.trim());
