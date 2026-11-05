@@ -139,6 +139,19 @@ export class Inbox {
     });
   }
 
+  async fetchLivePrice(url) {
+    if (!url || !/^https:\/\//i.test(url)) return '';
+    try {
+      const res = await fetch(url,{headers:{'user-agent':'Mozilla/5.0 (compatible; TelegramBookSearch/1.0)'},signal:AbortSignal.timeout(8000)});
+      if (!res.ok) return '';
+      const html = await res.text();
+      const block = html.match(/<p[^>]*class=["'][^"']*\bprice\b[^"']*["'][^>]*>[\s\S]*?<\/p>/i)?.[0] ?? '';
+      const ins = block.match(/<ins[\s\S]*?<\/ins>/i)?.[0] ?? '';
+      const amount = (ins || block).match(/(?:<bdi>|<span[^>]*class=["'][^"']*amount[^"']*["'][^>]*>)([۰-۹0-9,٬.]+)\s*(?:&nbsp;|<[^>]*>)*تومان/i)?.[1];
+      return amount ? amount.replace(/٬/g,',') : '';
+    } catch { return ''; }
+  }
+
   formatBookDetails(b) {
     const lines = [`📚 ${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`];
     if (b.author && b.author !== '-') lines.push(`نویسنده: ${b.author}`);
@@ -147,6 +160,7 @@ export class Inbox {
     if (b.year && b.year !== '-') lines.push(`سال انتشار: ${b.year}`);
     if (b.size && b.size !== '-') lines.push(`سایز: ${b.size}`);
     if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${b.isbn}`);
+    if (b.livePrice) lines.push(`قیمت فعلی سایت: ${b.livePrice} تومان`);
     if (b.link && b.link !== '-') lines.push(`لینک محصول: ${b.link}`);
     return lines.join('\n');
   }
@@ -188,7 +202,7 @@ export class Inbox {
       const token = /^book:([a-f0-9-]{36})$/.exec(callback.data ?? '')?.[1];
       const row = token ? [...this.sql.exec('SELECT details FROM book_results WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0] : null;
       await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:row ? 'مشخصات کتاب ارسال شد.' : 'این نتیجه منقضی شده است.'});
-      if (row) await this.send(user,this.formatBookDetails(JSON.parse(row.details)));
+      if (row) { const book = JSON.parse(row.details); book.livePrice = await this.fetchLivePrice(book.link); await this.send(user,this.formatBookDetails(book)); }
       else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
       return new Response('OK');
     }
