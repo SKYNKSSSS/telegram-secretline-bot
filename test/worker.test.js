@@ -58,6 +58,9 @@ test('book search returns matches by title, author and translator without relayi
   assert.match(h.calls.at(-1).text,/هابیت/);
   assert.match(h.calls.at(-1).text,/طاهره شکوری/);
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
+  await h.send(msg(17,33,{text:'هابیت'}));
+  assert.match(h.calls.at(-1).text,/جی آر آر تالکین/);
+  assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
 });
 
 test('both admins get unmodified copy and durable message-id reply routing independent of captions', async t => {

@@ -209,6 +209,13 @@ export class Inbox {
       await this.sendBookResults(user, m.text.trim());
       return new Response('OK');
     }
+    if (!admin && m.text && !m.text.startsWith('/') && !CATEGORIES.includes(m.text)) {
+      const automaticMatches = await this.searchBooks(m.text.trim());
+      if (automaticMatches.length) {
+        await this.sendBookResults(user, m.text.trim());
+        return new Response('OK');
+      }
+    }
     if (m.text === '/start') {
       await this.send(user,admin ? 'پنل مدیر: برای پاسخ روی پیام دریافتی ریپلای کنید.' : WELCOME,
         {reply_markup:{keyboard:CATEGORIES.map(x => [x]),resize_keyboard:true}});
