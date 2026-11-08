@@ -183,7 +183,7 @@ export class Inbox {
     return lines.join('\n');
   }
 
-  async sendBookResults(user, query, page = 0, searchToken = null) {
+  async sendBookResults(user, query, page = 0, searchToken = null, editMessageId = null) {
     const results = await this.searchBooks(query);
     if (!results.length) {
       await this.send(user, `نتیجه‌ای برای «${query}» پیدا نشد. نام کتاب، نویسنده یا مترجم را دقیق‌تر بنویسید.`);
@@ -209,7 +209,10 @@ export class Inbox {
     if (page < totalPages - 1) nav.push({text:'بعدی ➡️',callback_data:`page:${searchToken}:${page+1}`});
     if (nav.length) keyboard.push(nav);
     const pageLabel = totalPages > 1 ? `\nصفحه ${page+1} از ${totalPages}` : '';
-    await this.send(user,`📚 نتایج جستجو برای «${query}»${pageLabel}\n\nبرای دیدن مشخصات کامل، روی عنوان کتاب بزنید:`,{reply_markup:{inline_keyboard:keyboard}});
+    const text = `📚 نتایج جستجو برای «${query}»${pageLabel}\n\nبرای دیدن مشخصات کامل، روی عنوان کتاب بزنید:`;
+    const markup = {inline_keyboard:keyboard};
+    if (editMessageId) await this.rawApi('editMessageText',{chat_id:user,message_id:editMessageId,text,reply_markup:markup});
+    else await this.send(user,text,{reply_markup:markup});
   }
 
   send(chat_id, text, extra={}) { return this.api('sendMessage', {chat_id,text,...extra}); }
@@ -234,7 +237,7 @@ export class Inbox {
       if (page) {
         const session = [...this.sql.exec('SELECT query FROM book_searches WHERE user=? AND token=? AND expires>?',user,page[1],Date.now())][0];
         await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:session ? 'در حال نمایش صفحه بعد...' : 'این جستجو منقضی شده است.'});
-        if (session) await this.sendBookResults(user,session.query,Number(page[2]),page[1]);
+        if (session) await this.sendBookResults(user,session.query,Number(page[2]),page[1],callback.message.message_id);
         else await this.send(user,'این جستجو منقضی شده است؛ دوباره جستجو کنید.');
         return new Response('OK');
       }
