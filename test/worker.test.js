@@ -72,6 +72,18 @@ test('book search returns matches by title, author and translator without relayi
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
 });
 
+test('large author result sets are paged with next and previous buttons', async t => {
+  const csv = ['عنوان,شماره جلد,چند جلدی,شابک,سال انتشار,سایز,تعداد صفحات,وزن,نویسنده,مترجم,لینک محصول در سایت', ...Array.from({length:9},(_,i)=>`کتاب تالکین ${i+1},${i+1},زیر مجموعه,,,,,,تالکین,,https://example.com/${i+1}`)].join('\n');
+  const h=await harness(t,{bindings:{BOOKS_CSV_URL:'data:text/csv,'+encodeURIComponent(csv)}});
+  await h.send(msg(25,33,{text:'تالکین'}));
+  const first=h.calls.at(-1);
+  assert.equal(first.reply_markup.inline_keyboard.length,9);
+  const next=first.reply_markup.inline_keyboard.at(-1)[0].callback_data;
+  await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'content-type':'application/json','X-Telegram-Bot-Api-Secret-Token':SECRET},body:JSON.stringify({update_id:26,callback_query:{id:'cb-26',from:{id:33},message:{message_id:999,chat:{id:33,type:'private'}},data:next}})});
+  const second=h.calls.filter(c=>c.reply_markup?.inline_keyboard).at(-1);
+  assert.equal(second.reply_markup.inline_keyboard.length,2);
+});
+
 test('both admins get unmodified copy and durable message-id reply routing independent of captions', async t => {
   const h = await harness(t);
   await h.send(msg(20,33,{text:'پیشنهاد'}));

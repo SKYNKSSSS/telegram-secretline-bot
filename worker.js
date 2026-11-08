@@ -75,13 +75,14 @@ export class Inbox {
       CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, expires INTEGER);
       CREATE TABLE IF NOT EXISTS rates (user INTEGER PRIMARY KEY, count INTEGER, expires INTEGER);
       CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);
-      CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, PRIMARY KEY(user,token));`);
+      CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, PRIMARY KEY(user,token));
+      CREATE TABLE IF NOT EXISTS book_searches (user INTEGER, token TEXT PRIMARY KEY, query TEXT, expires INTEGER);`);
     try { this.sql.exec('ALTER TABLE routes ADD COLUMN source INTEGER'); } catch {}
   }
   async alarm() {
     const now = Date.now();
     this.ctx.storage.transactionSync(() => {
-      for (const table of ['routes','categories','updates','rates','book_results']) {
+      for (const table of ['routes','categories','updates','rates','book_results','book_searches']) {
         this.sql.exec(`DELETE FROM ${table} WHERE expires<=?`,now);
       }
     });
@@ -182,20 +183,33 @@ export class Inbox {
     return lines.join('\n');
   }
 
-  async sendBookResults(user, query) {
+  async sendBookResults(user, query, page = 0, searchToken = null) {
     const results = await this.searchBooks(query);
     if (!results.length) {
       await this.send(user, `نتیجه‌ای برای «${query}» پیدا نشد. نام کتاب، نویسنده یا مترجم را دقیق‌تر بنویسید.`);
       return;
     }
+    const pageSize = 8;
+    const totalPages = Math.ceil(results.length / pageSize);
+    if (!searchToken) {
+      searchToken = crypto.randomUUID();
+      this.sql.exec('INSERT OR REPLACE INTO book_searches VALUES (?,?,?,?)',user,searchToken,query,Date.now()+15*60*1000);
+    }
+    page = Math.max(0, Math.min(page, totalPages - 1));
     this.sql.exec('DELETE FROM book_results WHERE user=?',user);
+    const pageResults = results.slice(page * pageSize, (page + 1) * pageSize);
     const keyboard = [];
-    for (const b of results) {
+    for (const b of pageResults) {
       const token = crypto.randomUUID();
       this.sql.exec('INSERT INTO book_results VALUES (?,?,?,?,?)',user,token,b.title,JSON.stringify(b),Date.now()+15*60*1000);
       keyboard.push([{text:`${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`,callback_data:`book:${token}`}]);
     }
-    await this.send(user,`📚 نتایج جستجو برای «${query}»\n\nبرای دیدن مشخصات کامل، روی عنوان کتاب بزنید:`,{reply_markup:{inline_keyboard:keyboard}});
+    const nav = [];
+    if (page > 0) nav.push({text:'⬅️ قبلی',callback_data:`page:${searchToken}:${page-1}`});
+    if (page < totalPages - 1) nav.push({text:'بعدی ➡️',callback_data:`page:${searchToken}:${page+1}`});
+    if (nav.length) keyboard.push(nav);
+    const pageLabel = totalPages > 1 ? `\nصفحه ${page+1} از ${totalPages}` : '';
+    await this.send(user,`📚 نتایج جستجو برای «${query}»${pageLabel}\n\nبرای دیدن مشخصات کامل، روی عنوان کتاب بزنید:`,{reply_markup:{inline_keyboard:keyboard}});
   }
 
   send(chat_id, text, extra={}) { return this.api('sendMessage', {chat_id,text,...extra}); }
@@ -216,6 +230,14 @@ export class Inbox {
         return true;
       });
       if (!claimed) return new Response('Duplicate');
+      const page = /^page:([a-f0-9-]{36}):(\d+)$/.exec(callback.data ?? '');
+      if (page) {
+        const session = [...this.sql.exec('SELECT query FROM book_searches WHERE user=? AND token=? AND expires>?',user,page[1],Date.now())][0];
+        await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:session ? 'در حال نمایش صفحه بعد...' : 'این جستجو منقضی شده است.'});
+        if (session) await this.sendBookResults(user,session.query,Number(page[2]),page[1]);
+        else await this.send(user,'این جستجو منقضی شده است؛ دوباره جستجو کنید.');
+        return new Response('OK');
+      }
       const token = /^book:([a-f0-9-]{36})$/.exec(callback.data ?? '')?.[1];
       const row = token ? [...this.sql.exec('SELECT details FROM book_results WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0] : null;
       await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:row ? 'مشخصات کتاب ارسال شد.' : 'این نتیجه منقضی شده است.'});
