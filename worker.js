@@ -62,6 +62,8 @@ export default {
   },
 };
 
+function escapeHtml(value = '') { return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
+
 export class Inbox {
   constructor(ctx, env) {
     this.ctx = ctx;
@@ -166,16 +168,17 @@ export class Inbox {
   }
 
   formatBookDetails(b) {
-    const lines = [`📚 ${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`];
-    if (b.author && b.author !== '-') lines.push(`نویسنده: ${b.author}`);
-    if (b.translator && b.translator !== '-') lines.push(`مترجم: ${b.translator}`);
-    if (b.pages && b.pages !== '-') lines.push(`تعداد صفحات: ${b.pages}`);
-    if (b.year && b.year !== '-') lines.push(`سال انتشار: ${b.year}`);
-    if (b.size && b.size !== '-') lines.push(`سایز: ${b.size}`);
-    if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${b.isbn}`);
-    if (b.livePrice?.regular) lines.push(`قیمت اصلی سایت: ${b.livePrice.regular} تومان`);
-    if (b.livePrice?.sale) lines.push(`قیمت با تخفیف: ${b.livePrice.sale} تومان`);
-    if (b.link && b.link !== '-') lines.push(`لینک محصول: ${b.link}`);
+    const lines = [`📚 ${escapeHtml(b.title)}${b.volume && b.volume !== '-' ? ` | جلد ${escapeHtml(b.volume)}` : ''}`];
+    if (b.author && b.author !== '-') lines.push(`نویسنده: ${escapeHtml(b.author)}`);
+    if (b.translator && b.translator !== '-') lines.push(`مترجم: ${escapeHtml(b.translator)}`);
+    if (b.pages && b.pages !== '-') lines.push(`تعداد صفحات: ${escapeHtml(b.pages)}`);
+    if (b.year && b.year !== '-') lines.push(`سال انتشار: ${escapeHtml(b.year)}`);
+    if (b.size && b.size !== '-') lines.push(`سایز: ${escapeHtml(b.size)}`);
+    if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${escapeHtml(b.isbn)}`);
+    if (b.livePrice?.regular && b.livePrice?.sale && b.livePrice.regular !== b.livePrice.sale) {
+      lines.push(`💰 قیمت: <s>${escapeHtml(b.livePrice.regular)} تومان</s> ➜ <b>${escapeHtml(b.livePrice.sale)} تومان</b>`);
+    } else if (b.livePrice?.sale) lines.push(`💰 قیمت: <b>${escapeHtml(b.livePrice.sale)} تومان</b>`);
+    if (b.link && b.link !== '-') lines.push(`لینک محصول: ${escapeHtml(b.link)}`);
     return lines.join('\n');
   }
 
@@ -216,7 +219,7 @@ export class Inbox {
       const token = /^book:([a-f0-9-]{36})$/.exec(callback.data ?? '')?.[1];
       const row = token ? [...this.sql.exec('SELECT details FROM book_results WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0] : null;
       await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:row ? 'مشخصات کتاب ارسال شد.' : 'این نتیجه منقضی شده است.'});
-      if (row) { const book = JSON.parse(row.details); book.livePrice = await this.fetchLivePrice(book.link); await this.send(user,this.formatBookDetails(book)); }
+      if (row) { const book = JSON.parse(row.details); book.livePrice = await this.fetchLivePrice(book.link); await this.send(user,this.formatBookDetails(book),{parse_mode:'HTML'}); }
       else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
       return new Response('OK');
     }
