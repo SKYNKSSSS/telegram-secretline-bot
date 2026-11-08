@@ -2,6 +2,7 @@
 // Based on NotPouria/telegram-secretline-bot (MIT). See LICENSE.
 const FAILURE = '⚠️ ارسال تأیید نشد؛ ممکن است تحویل شده باشد. ارسال خودکار تکرار نمی‌شود. کمی بعد دوباره تلاش کنید؛ ممکن است نسخه تکراری ایجاد شود.';
 const BOOK_SEARCH = '🔎 جستجوی کتاب';
+const ALLOWED_COLLECTIONS = ['تاریخ ایران','نثر روان داستان های هزار و یک شب','پرتقال','ارباب حلقه ها','مدرسه افسانه ای'];
 const CATEGORIES = ['پیشنهاد','انتقاد','پرسش',BOOK_SEARCH];
 const WELCOME = 'سلام! 👋\nبه صندوق پیام خوش آمدید.\n\nلطفاً از بین این ۴ گزینه، یکی را انتخاب کنید:\n\n📝 پیشنهاد\n⚠️ انتقاد\n❓ پرسش\n🔎 جستجوی کتاب\n\nبعد از انتخاب، پیام یا عبارت موردنظرتان را بفرستید؛ در صورت نیاز پاسخ مدیر همین‌جا برای شما ارسال می‌شود.';
 function normalizeSearch(value = '') {
@@ -127,7 +128,13 @@ export class Inbox {
     const q = normalizeSearch(query);
     if (!q) return [];
     const tokens = q.split(' ');
-    return rows.slice(1).map(r => {
+    return rows.slice(1).filter(r => {
+      const volume = normalizeSearch(r[fields.volume] ?? '');
+      const series = normalizeSearch(r[fields.series] ?? '');
+      const title = normalizeSearch(r[fields.title] ?? '');
+      const isCollection = volume === normalizeSearch('مجموعه') || series === normalizeSearch('بله');
+      return !isCollection || ALLOWED_COLLECTIONS.some(name => title.includes(normalizeSearch(name)));
+    }).map(r => {
       const title = r[fields.title] ?? ''; const author = r[fields.author] ?? ''; const translator = r[fields.translator] ?? '';
       const haystack = normalizeSearch([title, author, translator].join(' '));
       const matches = haystack.includes(q) || tokens.every(t => haystack.includes(t));
