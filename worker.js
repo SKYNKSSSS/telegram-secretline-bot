@@ -136,7 +136,7 @@ export class Inbox {
       return !isCollection || ALLOWED_COLLECTIONS.some(name => title.includes(normalizeSearch(name)));
     }).map(r => {
       const title = r[fields.title] ?? ''; const author = r[fields.author] ?? ''; const translator = r[fields.translator] ?? '';
-      const haystack = normalizeSearch([title, author, translator].join(' '));
+      const haystack = normalizeSearch([title, author, translator, r[fields.link] ?? ''].join(' '));
       const matches = haystack.includes(q) || tokens.every(t => haystack.includes(t));
       const exact = normalizeSearch(title) === q ? 2 : haystack.includes(q) ? 1 : 0;
       return {r, title, author, translator, matches, exact};
