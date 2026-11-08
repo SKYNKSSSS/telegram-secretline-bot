@@ -176,7 +176,7 @@ export class Inbox {
     if (b.size && b.size !== '-') lines.push(`سایز: ${escapeHtml(b.size)}`);
     if (b.isbn && b.isbn !== '-') lines.push(`شابک: ${escapeHtml(b.isbn)}`);
     if (b.livePrice?.regular && b.livePrice?.sale && b.livePrice.regular !== b.livePrice.sale) {
-      lines.push(`💰 قیمت: <s>${escapeHtml(b.livePrice.regular)} تومان</s> ➜ <b>${escapeHtml(b.livePrice.sale)} تومان</b>`);
+      lines.push(`💰 قیمت: <s>${escapeHtml(b.livePrice.regular)} تومان</s> ← <b>${escapeHtml(b.livePrice.sale)} تومان</b>`);
     } else if (b.livePrice?.sale) lines.push(`💰 قیمت: <b>${escapeHtml(b.livePrice.sale)} تومان</b>`);
     if (b.link && b.link !== '-') lines.push(`لینک محصول: ${escapeHtml(b.link)}`);
     return lines.join('\n');
