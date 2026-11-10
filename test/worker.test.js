@@ -65,6 +65,8 @@ test('book search returns matches by title, author and translator without relayi
   assert.match(h.calls.at(-1).reply_markup.inline_keyboard[0][0].text,/هابیت/);
   await h.send(msg(181,33,{text:'hobbit'}));
   assert.match(h.calls.at(-1).reply_markup.inline_keyboard[0][0].text,/هابیت/);
+  await h.send(msg(182,33,{text:'هابیتت'}));
+  assert.match(h.calls.at(-1).reply_markup.inline_keyboard[0][0].text,/هابیت/);
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
   await h.send(msg(19,11,{text:'🔎 جستجوی کتاب'}));
   await h.send(msg(20,11,{text:'تالکین'}));

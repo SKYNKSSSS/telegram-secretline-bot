@@ -13,6 +13,27 @@ function normalizeSearch(value = '') {
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
+function editDistance(a, b) {
+  const d = Array.from({length:a.length+1},(_,i)=>Array(b.length+1).fill(0));
+  for (let i=0;i<=a.length;i++) d[i][0]=i;
+  for (let j=0;j<=b.length;j++) d[0][j]=j;
+  for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++) {
+    d[i][j] = Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+    if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1);
+  }
+  return d[a.length][b.length];
+}
+
+function fuzzyMatches(query, haystack) {
+  const q = query.split(' ').filter(Boolean);
+  const words = haystack.split(' ').filter(Boolean);
+  return q.every(token => {
+    if (token.length < 3) return words.includes(token);
+    const tolerance = token.length >= 8 ? 2 : 1;
+    return words.some(word => Math.abs(word.length-token.length)<=tolerance && editDistance(token,word)<=tolerance);
+  });
+}
+
 function parseCsv(text) {
   const rows = []; let row = []; let cell = ''; let quoted = false;
   for (let i = 0; i < text.length; i++) {
@@ -143,7 +164,7 @@ export class Inbox {
     }).map(r => {
       const title = r[fields.title] ?? ''; const author = r[fields.author] ?? ''; const translator = r[fields.translator] ?? '';
       const haystack = normalizeSearch([title, author, translator, r[fields.link] ?? ''].join(' '));
-      const matches = haystack.includes(q) || tokens.every(t => haystack.includes(t));
+      const matches = haystack.includes(q) || tokens.every(t => haystack.includes(t)) || fuzzyMatches(q, haystack);
       const exact = normalizeSearch(title) === q ? 2 : haystack.includes(q) ? 1 : 0;
       return {r, title, author, translator, matches, exact};
     }).filter(x => x.matches).sort((a,b) => b.exact - a.exact || a.title.length - b.title.length).map(x => {
