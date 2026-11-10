@@ -75,9 +75,11 @@ export class Inbox {
       CREATE TABLE IF NOT EXISTS updates (id INTEGER PRIMARY KEY, expires INTEGER);
       CREATE TABLE IF NOT EXISTS rates (user INTEGER PRIMARY KEY, count INTEGER, expires INTEGER);
       CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);
-      CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, PRIMARY KEY(user,token));
+      CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, search_token TEXT, page INTEGER, PRIMARY KEY(user,token));
       CREATE TABLE IF NOT EXISTS book_searches (user INTEGER, token TEXT PRIMARY KEY, query TEXT, expires INTEGER);
       CREATE TABLE IF NOT EXISTS book_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user INTEGER, query TEXT, status TEXT, created INTEGER);`);
+    try { this.sql.exec('ALTER TABLE book_results ADD COLUMN search_token TEXT'); } catch {}
+    try { this.sql.exec('ALTER TABLE book_results ADD COLUMN page INTEGER'); } catch {}
     try { this.sql.exec('ALTER TABLE routes ADD COLUMN source INTEGER'); } catch {}
   }
   async alarm() {
@@ -146,7 +148,9 @@ export class Inbox {
       return {r, title, author, translator, matches, exact};
     }).filter(x => x.matches).sort((a,b) => b.exact - a.exact || a.title.length - b.title.length).map(x => {
       const get = key => fields[key] >= 0 ? (x.r[fields[key]] ?? '').trim() : '';
-      return {title:x.title.trim(), volume:get('volume'), series:get('series'), isbn:get('isbn'), year:get('year'), size:get('size'), pages:get('pages'), author:x.author.trim(), translator:x.translator.trim(), link:get('link')};
+      const base = normalizeSearch(x.title).split(':')[0];
+      const collection = rows.slice(1).find(c => normalizeSearch(c[fields.volume] ?? '') === normalizeSearch('مجموعه') && normalizeSearch(c[fields.title] ?? '').includes(base) && ALLOWED_COLLECTIONS.some(name => normalizeSearch(c[fields.title] ?? '').includes(normalizeSearch(name))));
+      return {title:x.title.trim(), volume:get('volume'), series:get('series'), isbn:get('isbn'), year:get('year'), size:get('size'), pages:get('pages'), author:x.author.trim(), translator:x.translator.trim(), link:get('link'), collectionLink: collection && fields.link >= 0 ? (collection[fields.link] ?? '').trim() : ''};
     });
   }
 
@@ -204,7 +208,7 @@ export class Inbox {
     const keyboard = [];
     for (const b of pageResults) {
       const token = crypto.randomUUID();
-      this.sql.exec('INSERT INTO book_results VALUES (?,?,?,?,?)',user,token,b.title,JSON.stringify(b),Date.now()+15*60*1000);
+      this.sql.exec('INSERT INTO book_results (user,token,title,details,expires,search_token,page) VALUES (?,?,?,?,?,?,?)',user,token,b.title,JSON.stringify(b),Date.now()+15*60*1000,searchToken,page);
       keyboard.push([{text:`${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`,callback_data:`book:${token}`}]);
     }
     const nav = [];
@@ -266,11 +270,27 @@ export class Inbox {
         else await this.send(user,'این جستجو منقضی شده است؛ دوباره جستجو کنید.');
         return new Response('OK');
       }
+      const back = /^back:([a-f0-9-]{36})$/.exec(callback.data ?? '');
+      if (back) {
+        const row = [...this.sql.exec('SELECT search_token,page FROM book_results WHERE user=? AND token=? AND expires>?',user,back[1],Date.now())][0];
+        const session = row ? [...this.sql.exec('SELECT query FROM book_searches WHERE user=? AND token=? AND expires>?',user,row.search_token,Date.now())][0] : null;
+        await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:session ? 'بازگشت به نتایج' : 'این نتیجه منقضی شده است.'});
+        if (session) await this.sendBookResults(user,session.query,Number(row.page ?? 0),row.search_token,callback.message.message_id);
+        else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
+        return new Response('OK');
+      }
       const token = /^book:([a-f0-9-]{36})$/.exec(callback.data ?? '')?.[1];
       const row = token ? [...this.sql.exec('SELECT details FROM book_results WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0] : null;
       await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:row ? 'مشخصات کتاب ارسال شد.' : 'این نتیجه منقضی شده است.'});
-      if (row) { const book = JSON.parse(row.details); book.livePrice = await this.fetchLivePrice(book.link); await this.send(user,this.formatBookDetails(book),{parse_mode:'HTML'}); }
-      else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
+      if (row) {
+        const book = JSON.parse(row.details);
+        book.livePrice = await this.fetchLivePrice(book.link);
+        const buttons = [];
+        if (book.link) buttons.push([{text:'🌐 مشاهده در سایت',url:book.link},{text:'🛒 خرید کتاب',url:book.link}]);
+        if (book.collectionLink) buttons.push([{text:'📚 دیدن مجموعه',url:book.collectionLink}]);
+        buttons.push([{text:'🔙 بازگشت به نتایج',callback_data:`back:${token}`}]);
+        await this.send(user,this.formatBookDetails(book),{parse_mode:'HTML',reply_markup:{inline_keyboard:buttons}});
+      } else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
       return new Response('OK');
     }
     const m = update.message;
