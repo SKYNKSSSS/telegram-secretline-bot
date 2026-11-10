@@ -76,7 +76,8 @@ export class Inbox {
       CREATE TABLE IF NOT EXISTS rates (user INTEGER PRIMARY KEY, count INTEGER, expires INTEGER);
       CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);
       CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, PRIMARY KEY(user,token));
-      CREATE TABLE IF NOT EXISTS book_searches (user INTEGER, token TEXT PRIMARY KEY, query TEXT, expires INTEGER);`);
+      CREATE TABLE IF NOT EXISTS book_searches (user INTEGER, token TEXT PRIMARY KEY, query TEXT, expires INTEGER);
+      CREATE TABLE IF NOT EXISTS book_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user INTEGER, query TEXT, status TEXT, created INTEGER);`);
     try { this.sql.exec('ALTER TABLE routes ADD COLUMN source INTEGER'); } catch {}
   }
   async alarm() {
@@ -186,7 +187,9 @@ export class Inbox {
   async sendBookResults(user, query, page = 0, searchToken = null, editMessageId = null) {
     const results = await this.searchBooks(query);
     if (!results.length) {
-      await this.send(user, `نتیجه‌ای برای «${query}» پیدا نشد. نام کتاب، نویسنده یا مترجم را دقیق‌تر بنویسید.`);
+      const searchToken = crypto.randomUUID();
+      this.sql.exec('INSERT OR REPLACE INTO book_searches VALUES (?,?,?,?)',user,searchToken,query,Date.now()+15*60*1000);
+      await this.send(user,`نتیجه‌ای برای «${query}» پیدا نشد. می‌خواهید درخواستش را ثبت کنید؟`,{reply_markup:{inline_keyboard:[[{text:'📩 ثبت درخواست کتاب',callback_data:`request:${searchToken}`}],[{text:'❌ لغو',callback_data:`cancel:${searchToken}`}]]}});
       return;
     }
     const pageSize = 8;
@@ -233,6 +236,28 @@ export class Inbox {
         return true;
       });
       if (!claimed) return new Response('Duplicate');
+      const request = /^request:([a-f0-9-]{36})$/.exec(callback.data ?? '');
+      const cancel = /^cancel:([a-f0-9-]{36})$/.exec(callback.data ?? '');
+      if (request || cancel) {
+        const token = (request || cancel)[1];
+        const session = [...this.sql.exec('SELECT query FROM book_searches WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0];
+        if (cancel) {
+          await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'درخواست لغو شد.'});
+          await this.send(user,'درخواست ثبت نشد.');
+          return new Response('OK');
+        }
+        if (!session) {
+          await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'این درخواست منقضی شده است.'});
+          await this.send(user,'این درخواست منقضی شده است؛ دوباره جستجو کنید.');
+          return new Response('OK');
+        }
+        this.sql.exec('INSERT INTO book_requests (user,query,status,created) VALUES (?,?,?,?)',user,session.query,'new',Date.now());
+        const admins = this.env.ADMIN_IDS.split(',');
+        for (const adminId of admins) await this.send(adminId,`📚 درخواست جدید کتاب\n\nعبارت جستجو: ${session.query}\n\nبرای بررسی و پیگیری، عبارت بالا را جستجو کنید.`);
+        await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'درخواست ثبت شد.'});
+        await this.send(user,'✅ درخواست کتاب شما ثبت شد. در صورت موجودشدن یا پیدا شدن اطلاعات، پیگیری می‌شود.');
+        return new Response('OK');
+      }
       const page = /^page:([a-f0-9-]{36}):(\d+)$/.exec(callback.data ?? '');
       if (page) {
         const session = [...this.sql.exec('SELECT query FROM book_searches WHERE user=? AND token=? AND expires>?',user,page[1],Date.now())][0];
