@@ -42,7 +42,7 @@ test('Persian welcome explains operator privacy and offers default categories on
   const h = await harness(t);
   await h.send(msg(10,33,{text:'/start'}));
   assert.equal(h.calls.length,1);
-  assert.deepEqual(h.calls[0].reply_markup.keyboard.flat(),['پیشنهاد','انتقاد','پرسش','🔎 جستجوی کتاب']);
+  assert.deepEqual(h.calls[0].reply_markup.keyboard,[['پیشنهاد','پرسش'],['🔎 جستجوی کتاب']]);
   await h.send(msg(11,11,{text:'/start',chat:{id:-100,type:'supergroup'}}));
   await h.send(msg(12,11,{text:'/start',from:{id:99}}));
   assert.equal(h.calls.length,1);

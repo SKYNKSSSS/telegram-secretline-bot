@@ -3,7 +3,7 @@
 const FAILURE = '⚠️ ارسال تأیید نشد؛ ممکن است تحویل شده باشد. ارسال خودکار تکرار نمی‌شود. کمی بعد دوباره تلاش کنید؛ ممکن است نسخه تکراری ایجاد شود.';
 const BOOK_SEARCH = '🔎 جستجوی کتاب';
 const ALLOWED_COLLECTIONS = ['تاریخ ایران','نثر روان داستان های هزار و یک شب','پرتقال','ارباب حلقه ها','مدرسه افسانه ای'];
-const CATEGORIES = ['پیشنهاد','انتقاد','پرسش',BOOK_SEARCH];
+const CATEGORIES = ['پیشنهاد','پرسش',BOOK_SEARCH];
 const WELCOME = 'سلام! 👋\nبه صندوق پیام خوش آمدید.\n\nلطفاً از بین این ۴ گزینه، یکی را انتخاب کنید:\n\n📝 پیشنهاد\n⚠️ انتقاد\n❓ پرسش\n🔎 جستجوی کتاب\n\nبعد از انتخاب، پیام یا عبارت موردنظرتان را بفرستید؛ در صورت نیاز پاسخ مدیر همین‌جا برای شما ارسال می‌شود.';
 function normalizeSearch(value = '') {
   return String(value).toLocaleLowerCase('fa-IR')
@@ -214,8 +214,8 @@ export class Inbox {
 
   menuMarkup(user) {
     const hasFavorites = [...this.sql.exec('SELECT 1 FROM favorites WHERE user=? LIMIT 1',user)].length > 0;
-    const items = hasFavorites ? [...CATEGORIES,'⭐ علاقه‌مندی‌ها'] : CATEGORIES;
-    return {keyboard:items.map(x=>[x]),resize_keyboard:true};
+    const rows = [['پیشنهاد','پرسش'], hasFavorites ? [BOOK_SEARCH,'⭐ علاقه‌مندی‌ها'] : [BOOK_SEARCH]];
+    return {keyboard:rows,resize_keyboard:true};
   }
 
   async sendFavorites(user) {
