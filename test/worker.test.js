@@ -83,7 +83,8 @@ test('users can save and reopen favorite books', async t => {
   const detail=h.calls.at(-1);
   const favButton=detail.reply_markup.inline_keyboard.find(row=>row[0].callback_data?.startsWith('fav:'))[0];
   await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'content-type':'application/json','X-Telegram-Bot-Api-Secret-Token':SECRET},body:JSON.stringify({update_id:29,callback_query:{id:'cb-29',from:{id:33},message:{message_id:1000,chat:{id:33,type:'private'}},data:favButton.callback_data}})});
-  await h.send(msg(30,33,{text:'/علاقه‌مندی‌ها'}));
+  assert.ok(h.calls.at(-1).reply_markup.keyboard.flat().includes('⭐ علاقه‌مندی‌ها'));
+  await h.send(msg(30,33,{text:'⭐ علاقه‌مندی‌ها'}));
   const favorites=h.calls.at(-1);
   const savedButton=favorites.reply_markup.inline_keyboard[0][0];
   assert.match(savedButton.text,/هابیت/);

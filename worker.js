@@ -212,6 +212,12 @@ export class Inbox {
 
   favoriteKey(book) { return `${book.link || ''}|${book.title}|${book.volume || ''}`; }
 
+  menuMarkup(user) {
+    const hasFavorites = [...this.sql.exec('SELECT 1 FROM favorites WHERE user=? LIMIT 1',user)].length > 0;
+    const items = hasFavorites ? [...CATEGORIES,'⭐ علاقه‌مندی‌ها'] : CATEGORIES;
+    return {keyboard:items.map(x=>[x]),resize_keyboard:true};
+  }
+
   async sendFavorites(user) {
     const rows = [...this.sql.exec('SELECT token,details FROM favorites WHERE user=? ORDER BY created DESC',user)];
     if (!rows.length) { await this.send(user,'⭐ هنوز کتابی به علاقه‌مندی‌ها اضافه نکرده‌اید.'); return; }
@@ -313,7 +319,7 @@ export class Inbox {
         if (unfav) {
           this.sql.exec('DELETE FROM favorites WHERE user=? AND token=?',user,unfav[1]);
           await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'از علاقه‌مندی‌ها حذف شد.'});
-          await this.send(user,'💛 کتاب از علاقه‌مندی‌های شما حذف شد.');
+          await this.send(user,'💛 کتاب از علاقه‌مندی‌های شما حذف شد.',{reply_markup:this.menuMarkup(user)});
           return new Response('OK');
         }
         const token = (fav || favbook)[1];
@@ -328,7 +334,7 @@ export class Inbox {
           const favoriteToken = crypto.randomUUID();
           this.sql.exec('INSERT OR IGNORE INTO favorites (user,token,book_key,details,created) VALUES (?,?,?,?,?)',user,favoriteToken,this.favoriteKey(book),JSON.stringify(book),Date.now());
           await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'به علاقه‌مندی‌ها اضافه شد.'});
-          await this.send(user,'⭐ کتاب به علاقه‌مندی‌های شما اضافه شد. برای دیدن فهرست، /علاقه‌مندی‌ها را بفرستید.');
+          await this.send(user,'⭐ کتاب به علاقه‌مندی‌های شما اضافه شد. گزینهٔ علاقه‌مندی‌ها به منوی شما اضافه شد.',{reply_markup:this.menuMarkup(user)});
         } else {
           book.livePrice = await this.fetchLivePrice(book.link);
           await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'مشخصات کتاب ارسال شد.'});
@@ -423,13 +429,13 @@ export class Inbox {
         return new Response('OK');
       }
     }
-    if (m.text === '/علاقه‌مندی‌ها' || m.text === '/علاقه_مندی_ها') {
+    if (m.text === '⭐ علاقه‌مندی‌ها' || m.text === '/علاقه‌مندی‌ها' || m.text === '/علاقه_مندی_ها') {
       await this.sendFavorites(user);
       return new Response('OK');
     }
     if (m.text === '/start') {
       await this.send(user,admin ? 'پنل مدیر: برای پاسخ روی پیام دریافتی ریپلای کنید.' : WELCOME,
-        {reply_markup:{keyboard:CATEGORIES.map(x => [x]),resize_keyboard:true}});
+        {reply_markup:this.menuMarkup(user)});
     } else if (admin) {
       const route = [...this.sql.exec('SELECT user,source FROM routes WHERE admin=? AND message=? AND expires>?',String(user),m.reply_to_message?.message_id ?? -1,Date.now())][0];
       if (!route) await this.send(user,'مسیر پاسخ یافت نشد یا منقضی شده است. روی پیام دریافتی ریپلای کنید.');
