@@ -212,6 +212,8 @@ export class Inbox {
 
   favoriteKey(book) { return `${book.link || ''}|${book.title}|${book.volume || ''}`; }
 
+  isFavoritesButton(text) { const n=normalizeSearch(text ?? ''); return n === normalizeSearch('علاقه‌مندی‌ها') || n === normalizeSearch('علاقه مندی‌ها'); }
+
   menuMarkup(user) {
     const hasFavorites = [...this.sql.exec('SELECT 1 FROM favorites WHERE user=? LIMIT 1',user)].length > 0;
     const rows = [['پیشنهاد','پرسش'], hasFavorites ? [BOOK_SEARCH,'⭐ علاقه‌مندی‌ها'] : [BOOK_SEARCH]];
@@ -429,7 +431,7 @@ export class Inbox {
         return new Response('OK');
       }
     }
-    if (m.text === '⭐ علاقه‌مندی‌ها' || m.text === '/علاقه‌مندی‌ها' || m.text === '/علاقه_مندی_ها') {
+    if (this.isFavoritesButton(m.text) || m.text === '/علاقه‌مندی‌ها' || m.text === '/علاقه_مندی_ها') {
       await this.sendFavorites(user);
       return new Response('OK');
     }

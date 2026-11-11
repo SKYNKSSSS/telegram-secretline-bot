@@ -74,6 +74,12 @@ test('book search returns matches by title, author and translator without relayi
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
 });
 
+test('empty favorites button gives a friendly empty-state message', async t => {
+  const h=await harness(t);
+  await h.send(msg(26,44,{text:'⭐ علاقه‌مندی‌ها'}));
+  assert.match(h.calls.at(-1).text,/هنوز کتابی به علاقه‌مندی‌ها اضافه نکرده‌اید/);
+});
+
 test('users can save and reopen favorite books', async t => {
   const h=await harness(t);
   await h.send(msg(27,33,{text:'هابیت'}));
