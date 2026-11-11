@@ -74,6 +74,23 @@ test('book search returns matches by title, author and translator without relayi
   assert.equal(h.calls.filter(c=>c.method==='copyMessage').length,0);
 });
 
+test('users can save and reopen favorite books', async t => {
+  const h=await harness(t);
+  await h.send(msg(27,33,{text:'هابیت'}));
+  const list=h.calls.at(-1);
+  const bookButton=list.reply_markup.inline_keyboard[0][0];
+  await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'content-type':'application/json','X-Telegram-Bot-Api-Secret-Token':SECRET},body:JSON.stringify({update_id:28,callback_query:{id:'cb-28',from:{id:33},message:{message_id:999,chat:{id:33,type:'private'}},data:bookButton.callback_data}})});
+  const detail=h.calls.at(-1);
+  const favButton=detail.reply_markup.inline_keyboard.find(row=>row[0].callback_data?.startsWith('fav:'))[0];
+  await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'content-type':'application/json','X-Telegram-Bot-Api-Secret-Token':SECRET},body:JSON.stringify({update_id:29,callback_query:{id:'cb-29',from:{id:33},message:{message_id:1000,chat:{id:33,type:'private'}},data:favButton.callback_data}})});
+  await h.send(msg(30,33,{text:'/علاقه‌مندی‌ها'}));
+  const favorites=h.calls.at(-1);
+  const savedButton=favorites.reply_markup.inline_keyboard[0][0];
+  assert.match(savedButton.text,/هابیت/);
+  await h.mf.dispatchFetch('https://local.test/webhook',{method:'POST',headers:{'content-type':'application/json','X-Telegram-Bot-Api-Secret-Token':SECRET},body:JSON.stringify({update_id:31,callback_query:{id:'cb-31',from:{id:33},message:{message_id:1001,chat:{id:33,type:'private'}},data:savedButton.callback_data}})});
+  assert.match(h.calls.at(-1).text,/تالکین/);
+});
+
 test('missing book search offers a request button and notifies admins', async t => {
   const h=await harness(t);
   await h.send(msg(21,33,{text:'🔎 جستجوی کتاب'}));

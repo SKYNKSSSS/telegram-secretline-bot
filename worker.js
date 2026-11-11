@@ -98,7 +98,8 @@ export class Inbox {
       CREATE TABLE IF NOT EXISTS blocked (user INTEGER PRIMARY KEY, handle TEXT UNIQUE);
       CREATE TABLE IF NOT EXISTS book_results (user INTEGER, token TEXT, title TEXT, details TEXT, expires INTEGER, search_token TEXT, page INTEGER, PRIMARY KEY(user,token));
       CREATE TABLE IF NOT EXISTS book_searches (user INTEGER, token TEXT PRIMARY KEY, query TEXT, expires INTEGER);
-      CREATE TABLE IF NOT EXISTS book_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user INTEGER, query TEXT, status TEXT, created INTEGER);`);
+      CREATE TABLE IF NOT EXISTS book_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user INTEGER, query TEXT, status TEXT, created INTEGER);
+      CREATE TABLE IF NOT EXISTS favorites (user INTEGER, token TEXT PRIMARY KEY, book_key TEXT, details TEXT, created INTEGER, UNIQUE(user,book_key));`);
     try { this.sql.exec('ALTER TABLE book_results ADD COLUMN search_token TEXT'); } catch {}
     try { this.sql.exec('ALTER TABLE book_results ADD COLUMN page INTEGER'); } catch {}
     try { this.sql.exec('ALTER TABLE routes ADD COLUMN source INTEGER'); } catch {}
@@ -209,6 +210,28 @@ export class Inbox {
     return lines.join('\n');
   }
 
+  favoriteKey(book) { return `${book.link || ''}|${book.title}|${book.volume || ''}`; }
+
+  async sendFavorites(user) {
+    const rows = [...this.sql.exec('SELECT token,details FROM favorites WHERE user=? ORDER BY created DESC',user)];
+    if (!rows.length) { await this.send(user,'⭐ هنوز کتابی به علاقه‌مندی‌ها اضافه نکرده‌اید.'); return; }
+    const keyboard = rows.map(row => { const b=JSON.parse(row.details); return [{text:`${b.title}${b.volume && b.volume !== '-' ? ` | جلد ${b.volume}` : ''}`,callback_data:`favbook:${row.token}`}]; });
+    await this.send(user,'⭐ کتاب‌های موردعلاقهٔ شما\n\nبرای دیدن مشخصات روی عنوان کتاب بزنید:',{reply_markup:{inline_keyboard:keyboard}});
+  }
+
+  async favoriteMarkup(user, book, resultToken = null, favoriteToken = null) {
+    const buttons = [];
+    if (book.link) buttons.push([{text:'🌐 مشاهده در سایت',url:book.link},{text:'🛒 خرید کتاب',url:book.link}]);
+    if (book.collectionLink) buttons.push([{text:'📚 دیدن مجموعه',url:book.collectionLink}]);
+    if (favoriteToken) buttons.push([{text:'💛 حذف از علاقه‌مندی‌ها',callback_data:`unfav:${favoriteToken}`}]);
+    else if (resultToken) {
+      const existing = [...this.sql.exec('SELECT token FROM favorites WHERE user=? AND book_key=?',user,this.favoriteKey(book))][0];
+      buttons.push([{text:existing ? '💛 حذف از علاقه‌مندی‌ها' : '⭐ افزودن به علاقه‌مندی‌ها',callback_data:existing ? `unfav:${existing.token}` : `fav:${resultToken}`}]);
+    }
+    if (resultToken) buttons.push([{text:'🔙 بازگشت به نتایج',callback_data:`back:${resultToken}`}]);
+    return {inline_keyboard:buttons};
+  }
+
   async sendBookResults(user, query, page = 0, searchToken = null, editMessageId = null) {
     const results = await this.searchBooks(query);
     if (!results.length) {
@@ -283,6 +306,36 @@ export class Inbox {
         await this.send(user,'✅ درخواست کتاب شما ثبت شد. در صورت موجودشدن یا پیدا شدن اطلاعات، پیگیری می‌شود.');
         return new Response('OK');
       }
+      const fav = /^fav:([a-f0-9-]{36})$/.exec(callback.data ?? '');
+      const unfav = /^unfav:([a-f0-9-]{36})$/.exec(callback.data ?? '');
+      const favbook = /^favbook:([a-f0-9-]{36})$/.exec(callback.data ?? '');
+      if (fav || unfav || favbook) {
+        if (unfav) {
+          this.sql.exec('DELETE FROM favorites WHERE user=? AND token=?',user,unfav[1]);
+          await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'از علاقه‌مندی‌ها حذف شد.'});
+          await this.send(user,'💛 کتاب از علاقه‌مندی‌های شما حذف شد.');
+          return new Response('OK');
+        }
+        const token = (fav || favbook)[1];
+        const row = fav ? [...this.sql.exec('SELECT details FROM book_results WHERE user=? AND token=? AND expires>?',user,token,Date.now())][0] : [...this.sql.exec('SELECT details FROM favorites WHERE user=? AND token=?',user,token)][0];
+        if (!row) {
+          await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'این نتیجه منقضی شده است.'});
+          await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
+          return new Response('OK');
+        }
+        const book = JSON.parse(row.details);
+        if (fav) {
+          const favoriteToken = crypto.randomUUID();
+          this.sql.exec('INSERT OR IGNORE INTO favorites (user,token,book_key,details,created) VALUES (?,?,?,?,?)',user,favoriteToken,this.favoriteKey(book),JSON.stringify(book),Date.now());
+          await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'به علاقه‌مندی‌ها اضافه شد.'});
+          await this.send(user,'⭐ کتاب به علاقه‌مندی‌های شما اضافه شد. برای دیدن فهرست، /علاقه‌مندی‌ها را بفرستید.');
+        } else {
+          book.livePrice = await this.fetchLivePrice(book.link);
+          await this.rawApi('answerCallbackQuery',{callback_query_id:callback.id,text:'مشخصات کتاب ارسال شد.'});
+          await this.send(user,this.formatBookDetails(book),{parse_mode:'HTML',reply_markup:await this.favoriteMarkup(user,book,null,token)});
+        }
+        return new Response('OK');
+      }
       const page = /^page:([a-f0-9-]{36}):(\d+)$/.exec(callback.data ?? '');
       if (page) {
         const session = [...this.sql.exec('SELECT query FROM book_searches WHERE user=? AND token=? AND expires>?',user,page[1],Date.now())][0];
@@ -306,11 +359,7 @@ export class Inbox {
       if (row) {
         const book = JSON.parse(row.details);
         book.livePrice = await this.fetchLivePrice(book.link);
-        const buttons = [];
-        if (book.link) buttons.push([{text:'🌐 مشاهده در سایت',url:book.link},{text:'🛒 خرید کتاب',url:book.link}]);
-        if (book.collectionLink) buttons.push([{text:'📚 دیدن مجموعه',url:book.collectionLink}]);
-        buttons.push([{text:'🔙 بازگشت به نتایج',callback_data:`back:${token}`}]);
-        await this.send(user,this.formatBookDetails(book),{parse_mode:'HTML',reply_markup:{inline_keyboard:buttons}});
+        await this.send(user,this.formatBookDetails(book),{parse_mode:'HTML',reply_markup:await this.favoriteMarkup(user,book,token)});
       } else await this.send(user,'این نتیجه منقضی شده است؛ دوباره جستجو کنید.');
       return new Response('OK');
     }
@@ -373,6 +422,10 @@ export class Inbox {
         await this.sendBookResults(user, m.text.trim());
         return new Response('OK');
       }
+    }
+    if (m.text === '/علاقه‌مندی‌ها' || m.text === '/علاقه_مندی_ها') {
+      await this.sendFavorites(user);
+      return new Response('OK');
     }
     if (m.text === '/start') {
       await this.send(user,admin ? 'پنل مدیر: برای پاسخ روی پیام دریافتی ریپلای کنید.' : WELCOME,
